@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // v01.08: global chat "image upload" mode. Public write (no auth
+    // exists on this site) but capped at 5MB and images only, mirroring
+    // the client-side check in fbUploadChatImage(). Public read so the
+    // images actually display in chat. Delete is allowed for anyone
+    // because both the 24h lazy cleanup and admin message-delete run
+    // from the browser, same trust model as the rest of this site.
+    match /chat_images/{fileName} {
+      allow read: if true;
+      allow write: if request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if true;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
