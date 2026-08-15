@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // IMPORTANT: Firestore rules use OR semantics — if more than one
+    // match block applies to a path, access is granted if ANY of them
+    // allows it. An earlier version of this file had a separate
+    // "deny passwords" block *and* a separate "allow everything" block,
+    // which was actually still open on /passwords/** because the
+    // allow-everything block matched it too and OR'd it back open.
+    // Fixed by folding the exclusion into one rule instead of two.
+    //
+    // v01.24: same trap applies to the new account/DM collections below
+    // — they need their OWN exclusion folded into this one general rule,
+    // not a separate "deny" block, or the allow-everything rule OR's
+    // them back open exactly the way /passwords/** almost was.
+    match /{collection}/{doc} {
+      allow read, write: if collection != 'passwords'
+        && collection != 'nosirt_users'
+        && collection != 'nosirt_dms';
+    }
+
+    // v01.24: accounts — read is fine (the app needs to show other
+    // users' avatar/displayName), write is NEVER allowed from the
+    // client. Signup/login/avatar/playlist changes all go through
+    // account-auth.js / account-update.js instead, which use the Admin
+    // SDK (a different, more privileged credential that bypasses these
+    // rules entirely) and check a token server-side before writing —
+    // if this write rule were open, that server-side check would mean
+    // nothing, since anyone could just write the collection directly.
+    match /nosirt_users/{userId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // v01.24: DMs — same reasoning as above. Read stays open (a DM's
+    // recipient needs to read it), write goes only through dm-send.js,
+    // specifically so a message's "from" field can't be spoofed by
+    // writing straight to Firestore from devtools.
+    match /nosirt_dms/{messageId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>nosirt</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro" onclick="enterSite()">
+  <div class="intro-bg">
+    <svg style="position:absolute;bottom:0;width:100%;height:65%" viewBox="0 0 400 260" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="240" width="400" height="20" fill="#0a1205" opacity=".8"/>
+      <path d="M55,260 Q52,180 48,135 Q28,108 8,88 Q33,103 46,118 Q43,88 38,58 Q53,78 50,103 Q53,68 57,38 Q64,63 61,98 Q67,73 72,48 Q75,76 69,103 Q77,78 82,53 Q82,83 74,118 Q79,148 74,260Z" fill="#0f1a08" opacity=".9"/>
+      <path d="M345,260 Q348,180 352,135 Q372,108 392,88 Q367,103 354,118 Q357,88 362,58 Q347,78 350,103 Q347,68 343,38 Q336,63 339,98 Q333,73 328,48 Q325,76 331,103 Q323,78 318,53 Q318,83 326,118 Q321,148 326,260Z" fill="#0f1a08" opacity=".9"/>
+      <path d="M195,260 Q193,210 191,168 Q179,143 169,128 Q184,140 190,153 Q189,128 187,103 Q195,118 194,143 Q197,113 200,88 Q204,116 202,143 Q206,123 210,103 Q208,130 205,153 Q210,143 218,128 Q208,146 198,168 Q197,210 197,260Z" fill="#0d1606" opacity=".7"/>
+    </svg>
+    <div class="intro-lantern">
+      <div class="lantern-glow"></div>
+      <svg width="38" height="58" viewBox="0 0 38 58" xmlns="http://www.w3.org/2000/svg">
+        <line x1="19" y1="0" x2="19" y2="7" stroke="#c8892a" stroke-width="1.5" opacity=".6"/>
+        <rect x="7" y="7" width="24" height="4" rx="2" fill="#8b6020" opacity=".8"/>
+        <rect x="9" y="11" width="20" height="30" rx="3" fill="rgba(200,137,42,.12)" stroke="#8b6020" stroke-width="1"/>
+        <ellipse cx="19" cy="26" rx="6" ry="8" fill="rgba(200,160,60,.35)"/>
+        <rect x="11" y="41" width="16" height="4" rx="2" fill="#8b6020" opacity=".8"/>
+      </svg>
+    </div>
+    <div id="intro-leaves"></div>
+  </div>
+  <div style="position:relative;z-index:2;text-align:center;">
+    <div class="intro-name">nosirt</div>
+    <div class="intro-sub">a strange little corner of the web</div>
+    <div class="intro-enter">tap to wander in</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+<!-- Music Bar -->
+<div id="music-bar">
+  <div class="waveform"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+  <div class="music-now"><span id="now-playing-text">tap sounds · Ancient ambience is built in</span></div>
+  <div id="wireless-live-badge" class="wireless-badge" onclick="handleLiveBadgeClick()" title="the wireless — tap to browse episodes">
+    <span class="wireless-badge-dot"></span><span class="live-badge-text">podcast</span>
+  </div>
+  <button class="music-btn" onclick="openMusicModal()">change ♪</button>
+</div>
+
+<!-- ═══════════════════════════════
+     THE LIVING MAP
+═══════════════════════════════ -->
+<div id="map-world">
+  <div id="map-viewport" style="position:absolute;inset:0;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;">
+    <canvas id="map-canvas" style="position:absolute;top:0;left:0;image-rendering:auto;"></canvas>
+  </div>
+  <div id="map-tools" aria-label="map controls">
+    <div id="map-readout">the living map</div>
+    <div class="map-tool-row">
+      <button class="map-tool" onclick="zoomAt(1.18,innerWidth/2,innerHeight/2)" title="zoom in" aria-label="zoom in">+</button>
+      <button class="map-tool" onclick="zoomAt(0.84,innerWidth/2,innerHeight/2)" title="zoom out" aria-label="zoom out">-</button>
+      <button id="map-reset" class="map-tool" onclick="resetMap()" title="center map" aria-label="center map">⊕</button>
+    </div>
+  </div>
+</div>
+
+<!-- FIXED PIN OVERLAY - always on top, positions calculated from map transform -->
+<div id="pin-overlay" style="position:absolute;inset:0;pointer-events:none;z-index:20;">
+  <div id="fpin-garden" class="map-pin" onclick="goToLocation('garden')" style="pointer-events:all">
+    <div class="pin-dot"></div><div class="pin-label">the garden</div>
+    <div class="pin-construction">🚧</div>
+  </div>
+  <div id="fpin-square" class="map-pin" onclick="goToLocation('square')" style="pointer-events:all">
+    <div class="pin-dot"></div><div class="pin-label">town square</div>
+    <div class="pin-construction">🚧</div>
+  </div>
+  <div id="fpin-forum" class="map-pin" onclick="goToLocation('forum')" style="pointer-events:all">
+    <div class="pin-dot"></div><div class="pin-label">the tower (n/)</div>
+    <div class="pin-construction">🚧</div>
+  </div>
+  <div id="fpin-castle" class="map-pin" onclick="goToLocation('castle')" style="pointer-events:all">
+    <div class="pin-dot" style="background:rgba(200,137,42,.6)"></div>
+    <div class="pin-label secret">nosirt's keep</div>
+    <div class="pin-construction">🚧</div>
+  </div>
+  <div id="fpin-wireless" class="map-pin" onclick="goToLocation('wireless')" style="pointer-events:all">
+    <div class="pin-dot" style="background:rgba(255,210,110,.65)"></div><div class="pin-label">the wireless</div>
+    <div class="pin-construction">🚧</div>
+  </div>
+</div>
+
+<!-- v01.07: shown when tapping a pin/nav item the admin has switched off -->
+<div id="review-modal">
+  <div class="review-panel">
+    <div class="review-icon">🚧</div>
+    <div class="review-title">under temporary review</div>
+    <div class="review-text" id="review-text">this part of the map is being tended to. check back soon.</div>
+    <button class="review-close" onclick="closeReviewNote()">turn back</button>
+  </div>
+</div>
+
+
+<!-- MOOD WORLDS -->
+<div id="world-wonderland" class="mood-world">
+  <div class="wl-stars"></div><div class="wl-moon"></div>
+  <div id="wl-fireflies"></div>
+  <div id="wl-cheshire" style="position:absolute;font-size:2.5rem;opacity:0;cursor:pointer;
+    animation:cheshireFloat 12s ease-in-out infinite;top:45%;right:15%;z-index:8"
+    onclick="cheshireClick(this)">😸</div>
+  <div id="wl-soldiers" style="position:absolute;bottom:22%;left:0;width:100%;pointer-events:none"></div>
+  <canvas id="sparkle-canvas"></canvas>
+  <div id="wl-floaters"></div>
+  <div class="wl-creature wl-cat" id="wl-cat" onclick="petCat(this)">😺</div>
+  <div class="wl-creature wl-rabbit" id="wl-rabbit" onclick="pokeRabbit(this)">🐇</div>
+  <svg style="position:absolute;top:14%;left:8%;width:55px;height:55px;opacity:.28;pointer-events:none" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="28" fill="none" stroke="rgba(200,160,80,.6)" stroke-width="1.5"/>
+    <circle cx="30" cy="30" r="2" fill="rgba(200,160,80,.8)"/>
+    <line id="clock-hour" x1="30" y1="30" x2="30" y2="14" stroke="rgba(200,160,80,.8)" stroke-width="2" stroke-linecap="round"/>
+    <line id="clock-min" x1="30" y1="30" x2="30" y2="10" stroke="rgba(200,160,80,.6)" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>
+  <div class="mood-label">wonderland</div>
+</div>
+<div id="world-surrealist" class="mood-world">
+  <div class="sur-ground"></div>
+  <svg style="position:absolute;top:13%;right:9%;width:48px;height:76px;opacity:.45;pointer-events:none" viewBox="0 0 50 80">
+    <rect x="5" y="5" width="40" height="35" rx="4" fill="rgba(200,160,60,.22)" stroke="rgba(200,160,60,.5)" stroke-width="1"/>
+    <path d="M5,40 Q10,55 8,70 Q15,65 25,72 Q35,65 42,70 Q40,55 45,40Z" fill="rgba(200,160,60,.14)" stroke="rgba(200,160,60,.3)" stroke-width="1"/>
+    <circle cx="25" cy="22" r="10" fill="none" stroke="rgba(200,160,60,.6)" stroke-width="1"/>
+    <line x1="25" y1="22" x2="25" y2="14" stroke="rgba(200,160,60,.8)" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="25" y1="22" x2="30" y2="22" stroke="rgba(200,160,60,.8)" stroke-width="1" stroke-linecap="round"/>
+  </svg>
+  <div class="sur-eye" style="width:36px;height:36px;top:22%;left:11%"></div>
+  <!-- Second sun (Dalí touch) -->
+  <div style="position:absolute;top:8%;right:5%;width:45px;height:45px;border-radius:50%;
+    background:radial-gradient(circle,#fff5c0,#ffd040,rgba(255,160,0,0));
+    box-shadow:0 0 30px rgba(255,200,0,.4);opacity:.6;pointer-events:none;
+    animation:surSunPulse 6s ease-in-out infinite"></div>
+  <!-- Heat shimmer lines -->
+  <div style="position:absolute;bottom:34%;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,transparent,rgba(255,200,100,.15),transparent);
+    animation:heatShimmer 3s ease-in-out infinite;pointer-events:none"></div>
+  <div style="position:absolute;bottom:37%;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,rgba(255,180,80,.1),transparent);
+    animation:heatShimmer 4s ease-in-out infinite .5s;pointer-events:none"></div>
+  <div id="sur-elephants"></div>
+  <div class="mood-label">the dreamfields</div>
+</div>
+<div id="world-expressionist" class="mood-world">
+  <canvas id="space-canvas" style="position:absolute;inset:0;width:100%;height:100%;display:block"></canvas>
+  <div class="mood-label" style="color:rgba(180,200,255,.35)">the void</div>
+</div>
+
+<div id="mood-back" onclick="exitMoodWorld()">← back to map</div>
+
+<!-- PAGES -->
+<div id="page-garden" class="page">
+  <div class="page-inner">
+    <div class="page-title">the garden</div>
+    <div class="page-sub">step into a world</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div onclick="enterMoodWorld('wonderland')" style="background:linear-gradient(135deg,rgba(45,16,84,.8),rgba(26,10,46,.9));border:1px solid rgba(100,60,140,.25);border-radius:12px;padding:16px;cursor:pointer">
+        <div style="font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--cream);margin-bottom:4px">✦ Wonderland</div>
+        <div style="font-family:'IM Fell English',serif;font-style:italic;font-size:.78rem;color:var(--fog)">soft, drifting, slightly wrong. drag your finger and watch it spark.</div>
+        <div style="font-size:.68rem;color:var(--amber);margin-top:6px;opacity:.8">♪ lofi drift — tap the cat, poke the rabbit</div>
+      </div>
+      <div onclick="enterMoodWorld('surrealist')" style="background:linear-gradient(135deg,rgba(107,69,21,.8),rgba(61,42,10,.9));border:1px solid rgba(160,100,30,.25);border-radius:12px;padding:16px;cursor:pointer">
+        <div style="font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--cream);margin-bottom:4px">◈ The Dreamfields</div>
+        <div style="font-family:'IM Fell English',serif;font-style:italic;font-size:.78rem;color:var(--fog)">long-legged things walk across a burnt sky. tap them.</div>
+        <div style="font-size:.68rem;color:var(--amber);margin-top:6px;opacity:.8">♪ slow haze — elephants toot</div>
+      </div>
+      <div onclick="enterMoodWorld('expressionist')" style="background:linear-gradient(135deg,rgba(42,10,10,.8),rgba(26,10,30,.9));border:1px solid rgba(100,40,40,.25);border-radius:12px;padding:16px;cursor:pointer">
+        <div style="font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--cream);margin-bottom:4px">✦ The Void</div>
+        <div style="font-family:'IM Fell English',serif;font-style:italic;font-size:.78rem;color:var(--fog)">float above a solar system that has no name. tap the planets.</div>
+        <div style="font-size:.68rem;color:rgba(180,210,255,.7);margin-top:6px;opacity:.8">♫ tap planets for sounds</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-square" class="page">
+  <div class="page-inner">
+    <div class="page-title">town square</div>
+    <div class="page-sub">leave something behind</div>
+    <div class="square-tabs">
+      <div class="sq-tab active" onclick="openTab('recs')">📽 recs</div>
+      <div class="sq-tab" onclick="openTab('notes')">📜 the board</div>
+      <div class="sq-tab" onclick="openTab('scream')">🚪 screaming door</div>
+    </div>
+    <div id="panel-recs" class="sq-panel active">
+      <div class="rec-list" id="rec-list"></div>
+      <div class="add-form">
+        <div class="form-row">
+          <input class="sq-input" id="rec-title" placeholder="title..." style="flex:2">
+          <select class="sq-select" id="rec-type" style="flex:1">
+            <option value="film">film</option><option value="series">series</option>
+            <option value="book">book</option><option value="music">music</option><option value="other">other</option>
+          </select>
+        </div>
+        <textarea class="sq-textarea" id="rec-note" placeholder="why though? (optional)" style="min-height:48px"></textarea>
+        <button class="sq-submit" onclick="addRec()">leave a rec →</button>
+      </div>
+    </div>
+    <div id="panel-notes" class="sq-panel">
+      <textarea class="notes-area" id="notes-text" placeholder="the board is yours..."></textarea>
+      <div class="notes-save">
+        <span class="notes-hint">anyone can read & edit</span>
+        <button class="sq-submit" style="width:auto;padding:7px 16px" onclick="saveNotes()">post →</button>
+      </div>
+    </div>
+    <div id="panel-scream" class="sq-panel">
+      <div class="scream-void" id="scream-void"></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <textarea class="sq-textarea" id="scream-text" placeholder="type your scream... it flies into the void for a week."></textarea>
+        <button class="sq-submit" onclick="sendScream()">throw it into the void →</button>
+        <div class="scream-hint">screams vanish after 7 days</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-forum" class="page">
+  <div class="page-inner">
+    <div class="page-title">the tower</div>
+    <div class="page-sub" id="forum-sub">n/movies</div>
+    <div class="forum-nav" id="forum-nav"></div>
+    <div class="forum-sort">
+      <button class="sort-btn active" onclick="setSort('new',this)">✦ new</button>
+      <button class="sort-btn" onclick="setSort('top',this)">▲ top</button>
+    </div>
+    <button class="new-post-btn" onclick="openNewPost()">+ make a post</button>
+    <div class="post-list" id="post-list"></div>
+  </div>
+  <div id="post-detail">
+    <div class="detail-back" onclick="closeDetail()">← back</div>
+    <div id="detail-title" class="detail-title"></div>
+    <div id="detail-meta" class="detail-meta"></div>
+    <div id="detail-body" class="detail-body"></div>
+    <div id="detail-votes" style="display:flex;gap:10px;margin-bottom:16px;align-items:center"></div>
+    <div class="comments-title">comments</div>
+    <div id="detail-comments"></div>
+    <div class="add-comment">
+      <textarea class="sq-textarea" id="comment-text" placeholder="leave a thought..." style="min-height:68px"></textarea>
+      <button class="sq-submit" onclick="addComment()">reply →</button>
+    </div>
+  </div>
+  <div id="new-post-form">
+    <div class="detail-back" onclick="closeNewPost()">← back</div>
+    <div class="form-title">new post in <span id="new-post-forum"></span></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="sq-input" id="post-title-input" placeholder="title...">
+      <textarea class="sq-textarea" id="post-body-input" placeholder="say something..." style="min-height:100px"></textarea>
+      <button class="sq-submit" onclick="submitPost()">post it →</button>
+    </div>
+  </div>
+</div>
+
+<div id="page-wireless" class="page">
+  <div class="page-inner wp-page-inner">
+    <div class="page-title">the wireless</div>
+    <div class="page-sub">tune in</div>
+
+    <!-- ══ HOME: netflix-style grid of shows ══ -->
+    <div id="wp-home">
+      <div class="wp-toolbar">
+        <input class="sq-input" id="wp-home-search" placeholder="search public shows..." oninput="renderShowGrid()" style="flex:1">
+        <!-- profile/library icon — opens my library dropdown -->
+        <div class="wp-profile-wrap" id="wp-profile-wrap">
+          <button class="wp-profile-btn" id="wp-profile-btn" onclick="toggleLibraryDropdown()" title="my library" style="display:none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </button>
+          <div class="wp-library-dropdown" id="wp-library-dropdown">
+            <div class="wp-library-header" id="wp-library-username">my library</div>
+            <div id="wp-my-shows-list"></div>
+            <div class="wp-library-actions">
+              <button class="wp-add-toggle" id="btn-new-show-admin" style="display:none" onclick="openShowForm(null);closeLibraryDropdown()">+ new show</button>
+              <button class="wp-add-toggle" id="btn-new-show-user" style="display:none" onclick="openUserShowForm();closeLibraryDropdown()">+ new playlist</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- public shows only -->
+      <div id="wp-show-grid" class="wp-show-grid"></div>
+      <div id="wp-show-grid-empty" class="wp-ep-empty" style="display:none">no public shows yet.</div>
+    </div>
+
+    <!-- ══ SHOW DETAIL + PLAYER ══ -->
+    <div id="wp-show-view" style="display:none">
+      <button class="wp-back-btn" onclick="showWirelessHome()">‹ home</button>
+
+      <div id="wp-show-banner" class="wp-show-banner"></div>
+
+      <div class="wp-show-desc-wrap">
+        <div class="wp-show-desc" id="wp-show-desc-text"></div>
+        <textarea class="sq-textarea" id="wp-show-desc-edit" style="display:none;min-height:60px"></textarea>
+        <div class="wp-show-desc-actions" id="wp-show-desc-actions" style="display:none">
+          <button class="sq-submit" style="width:auto;padding:6px 14px" onclick="saveShowDescription()">save</button>
+          <button class="wcal-mini-btn" style="flex:0 0 auto;padding:6px 12px" onclick="cancelShowDescriptionEdit()">cancel</button>
+        </div>
+        <button class="wp-mini-edit show-admin" id="wp-show-desc-edit-btn" onclick="startShowDescriptionEdit()">✎ edit description</button>
+      </div>
+
+      <div class="wp-show-admin-row" id="wp-show-admin-row" style="display:none">
+        <!-- rendered dynamically by renderShowBanner() based on ownership -->
+      </div>
+
+      <div class="wp-header-controls">
+        <button class="wp-mode-label" id="wp-mode-toggle" onclick="toggleWaveVideo()" title="Toggle between waveform and video view">
+          <svg class="wp-icon wp-mode-icon-wave" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="10" width="3" height="4" rx="1.5"/><rect x="8" y="5" width="3" height="14" rx="1.5"/><rect x="14" y="2" width="3" height="20" rx="1.5"/><rect x="20" y="8" width="2.5" height="8" rx="1.25"/></svg>
+          <svg class="wp-icon wp-mode-icon-video" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M4 6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2.3l4.3-2.5a1 1 0 0 1 1.5.87v10.66a1 1 0 0 1-1.5.87L15 15.7V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/></svg>
+          <span class="wp-mode-text">podcast</span>
+        </button>
+      </div>
+
+      <div id="wp-stage" class="wp-stage mode-wave is-paused">
+        <div id="wp-placeholder" class="wp-placeholder">pick a video below to begin →</div>
+        <div id="wp-yt-wrap" class="wp-yt-wrap"><div id="yt-player"></div></div>
+
+        <!-- v01.07: album-art style tile — the "audio only" visual, wave mode only -->
+        <div id="wp-art-tile" class="wp-art-tile">
+          <canvas id="wp-wave" class="wp-wave"></canvas>
+        </div>
+
+        <!-- fullscreen/theater — video mode only -->
+        <div id="wp-video-controls" class="wp-video-controls" style="display:none">
+          <button class="wp-mini-btn" onclick="toggleTheater()" title="theater mode">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2"/></svg>
+          </button>
+          <button class="wp-mini-btn" onclick="toggleFullscreen()" title="fullscreen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+        </div>
+
+        <!-- center play button — shown when nothing is playing -->
+        <button id="wp-center-play" class="wp-center-play" aria-label="play" style="display:flex">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.87l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>
+        </button>
+
+        <div id="wp-controls" class="wp-controls">
+          <div class="wp-now-title" id="wp-now-title"></div>
+
+          <div class="wp-btn-row">
+            <button class="wp-btn" id="wp-back" aria-label="back 10 seconds">
+              <svg class="wp-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 7.5V12h4.5"/></svg>
+              <span class="wp-btn-sub">10</span>
+            </button>
+            <button class="wp-btn" id="wp-prev" onclick="prevEpisode()" aria-label="previous video">
+              <svg class="wp-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 6a1 1 0 0 1 2 0v12a1 1 0 0 1-2 0V6zm3.5 5.13 8.4-5.93A1 1 0 0 1 20.5 6v12a1 1 0 0 1-1.6.8l-8.4-5.93a1 1 0 0 1 0-1.74z"/></svg>
+            </button>
+            <button class="wp-btn wp-btn-main" id="wp-playpause" aria-label="play or pause">
+              <svg class="wp-icon wp-icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.87l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>
+              <svg class="wp-icon wp-icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="5" width="4.5" height="14" rx="1.5"/><rect x="13.5" y="5" width="4.5" height="14" rx="1.5"/></svg>
+            </button>
+            <button class="wp-btn" id="wp-next" onclick="nextEpisode()" aria-label="next video">
+              <svg class="wp-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6a1 1 0 0 0-2 0v12a1 1 0 0 0 2 0V6zm-3.5 5.13L5.1 5.2A1 1 0 0 0 3.5 6v12a1 1 0 0 0 1.6.8l8.4-5.93a1 1 0 0 0 0-1.74z"/></svg>
+            </button>
+            <button class="wp-btn" id="wp-fwd" aria-label="forward 10 seconds">
+              <svg class="wp-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 0-2.6 5.9"/><path d="M20 7.5V12h-4.5"/></svg>
+              <span class="wp-btn-sub">10</span>
+            </button>
+          </div>
+
+          <div class="wp-seek-row">
+            <span class="wp-time" id="wp-time-cur">0:00</span>
+            <div class="wp-seekbar" id="wp-seekbar">
+              <div class="wp-seek-fill" id="wp-seek-fill"></div>
+              <div class="wp-seek-handle" id="wp-seek-handle"></div>
+            </div>
+            <span class="wp-time" id="wp-time-dur">0:00</span>
+          </div>
+
+          <!-- volume + mute — available in both wave and video modes -->
+          <div class="wp-volume-row" id="wp-volume-row">
+            <button class="wp-mute-btn" id="wp-mute-btn" aria-label="mute">
+              <svg class="wp-icon wp-icon-vol-on" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+              <svg class="wp-icon wp-icon-vol-off" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M15.5 9.5l5 5m0-5l-5 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+            </button>
+            <input type="range" id="wp-volume" class="wp-volume-slider" min="0" max="100" value="100" aria-label="volume">
+          </div>
+        </div>
+      </div>
+
+      <div class="wp-toolbar">
+        <input class="sq-input" id="wp-search" placeholder="search videos..." oninput="renderEpisodes()" style="flex:1">
+        <button class="wp-add-toggle" onclick="toggleAddEpisode()">+ add</button>
+      </div>
+
+      <div id="wp-add-panel" class="wp-add-panel" style="display:none">
+        <div id="wp-gate">
+          <input class="sq-input" id="wp-gate-pw" type="password" placeholder="password...">
+          <button class="sq-submit" style="width:auto;padding:7px 16px" onclick="tryRadioUnlock()">unlock →</button>
+          <div class="wp-gate-wrong" id="wp-gate-wrong"></div>
+        </div>
+        <div id="wp-add-form" style="display:none">
+          <div class="wp-add-tabs">
+            <button class="wp-add-tab active" id="wp-add-tab-single" onclick="setAddTab('single')">single video</button>
+            <button class="wp-add-tab" id="wp-add-tab-playlist" onclick="setAddTab('playlist')">import playlist</button>
+          </div>
+          <div id="wp-add-single">
+            <input class="sq-input" id="wp-ep-title" placeholder="video title...">
+            <input class="sq-input" id="wp-ep-url" placeholder="youtube link...">
+            <textarea class="sq-textarea" id="wp-ep-desc" placeholder="short description (optional)" style="min-height:48px"></textarea>
+            <button class="sq-submit" onclick="addEpisode()">add video →</button>
+          </div>
+          <div id="wp-add-playlist" style="display:none">
+            <input class="sq-input" id="wp-playlist-url" placeholder="youtube playlist link...">
+            <div class="wcal-admin-note">pulls every video's title + thumbnail straight from the playlist. large playlists may take a few seconds.</div>
+            <button class="sq-submit" onclick="importPlaylist()">import playlist →</button>
+            <div id="wp-import-progress" class="wcal-admin-note" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wp-select-row">
+        <button class="wcal-mini-btn show-admin" id="wp-select-toggle" style="flex:0 0 auto;padding:6px 12px" onclick="toggleSelectMode()">select</button>
+        <span id="wp-select-count" style="display:none"></span>
+        <button class="wcal-mini-btn danger show-admin" id="wp-bulk-delete-btn" style="display:none;flex:0 0 auto;padding:6px 12px" onclick="bulkDeleteEpisodes()">delete selected</button>
+      </div>
+
+      <div class="wp-episode-list" id="wp-episode-list"></div>
+
+      <!-- comments -->
+      <div class="wp-comments" id="wp-comments-section" style="display:none">
+        <div class="wp-comments-title">comments</div>
+        <div class="wp-comment-form">
+          <input class="sq-input" id="wp-comment-name" placeholder="your name...">
+          <textarea class="sq-textarea" id="wp-comment-text" placeholder="say something about this one..." style="min-height:44px"></textarea>
+          <button class="sq-submit" style="width:auto;padding:8px 16px" onclick="submitComment()">post →</button>
+        </div>
+        <div id="wp-comment-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- show create/edit modal -->
+<div id="wp-show-form-modal" style="display:none">
+  <div class="wcal-panel">
+    <div class="wcal-head">
+      <div class="wcal-title" id="wp-show-form-title">new show</div>
+      <button class="wcal-close-x" onclick="closeShowForm()">✕</button>
+    </div>
+    <div class="wcal-admin-row" style="flex-direction:column;align-items:stretch;gap:6px;margin-bottom:12px">
+      <label style="flex:none">title</label>
+      <input class="sq-input" id="wp-show-title-input" placeholder="show title...">
+    </div>
+    <div class="wcal-admin-row" style="flex-direction:column;align-items:stretch;gap:6px;margin-bottom:12px">
+      <label style="flex:none">description</label>
+      <textarea class="sq-textarea" id="wp-show-desc-input" placeholder="what's this show about?" style="min-height:70px"></textarea>
+    </div>
+    <div class="wcal-admin-row" style="flex-direction:column;align-items:stretch;gap:8px;margin-bottom:6px">
+      <label style="flex:none">cover</label>
+      <div class="wp-cover-toggle">
+        <button class="wcal-mini-btn" id="wp-cover-opt-youtube" onclick="setCoverType('youtube')">from video</button>
+        <button class="wcal-mini-btn" id="wp-cover-opt-custom" onclick="setCoverType('custom')">custom image</button>
+        <button class="wcal-mini-btn" id="wp-cover-opt-plain" onclick="setCoverType('plain')">plain color</button>
+      </div>
+      <input class="sq-input" id="wp-show-cover-url" placeholder="image url..." style="display:none">
+      <input type="color" id="wp-show-cover-color" value="#c8892a" style="display:none;width:100%;height:38px;border:none;border-radius:8px;background:none;">
+    </div>
+    <label class="wp-default-check">
+      <input type="checkbox" id="wp-show-default-check"> make this the main podcast button's default show
+    </label>
+    <div class="wcal-admin-actions">
+      <button class="sq-submit" style="width:auto;padding:8px 18px" onclick="saveShowForm()">save show →</button>
+    </div>
+  </div>
+</div>
+
+<!-- reusable confirm modal -->
+<div id="wp-confirm-modal" style="display:none">
+  <div class="wcal-panel" style="max-width:360px">
+    <div class="wcal-title" id="wp-confirm-title">are you sure?</div>
+    <div class="wcal-sub" id="wp-confirm-body" style="text-align:left"></div>
+    <div class="wcal-admin-actions">
+      <button class="wcal-mini-btn danger" style="flex:0 0 auto;padding:9px 16px" id="wp-confirm-yes">yes, delete</button>
+      <button class="wcal-mini-btn" style="flex:0 0 auto;padding:9px 16px" onclick="closeConfirmModal()">cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="bottom-nav" style="display:none">
+  <div class="nav-row">
+    <button class="nav-btn" onclick="navTo('garden')" id="nav-garden"><span class="btn-icon">🌿</span>garden</button>
+    <button class="nav-btn" onclick="navTo('square')" id="nav-square"><span class="btn-icon">🏚</span>square</button>
+    <button class="nav-btn" onclick="navTo('forum')" id="nav-forum"><span class="btn-icon">🗼</span>n/</button>
+    <button class="nav-btn" onclick="navTo('wireless')" id="nav-wireless"><span class="btn-icon">🎙</span>wireless</button>
+    <button class="nav-btn" onclick="navigateTo('')" id="nav-map"><span class="btn-icon">🗺</span>map</button>
+  </div>
+</div>
+
+<!-- v01.05: PROFILE ICON (draggable, houses everything) -->
+<div id="profile-icon" class="profile-icon-draggable" title="click to open admin / bio / versions">
+  <svg width="40" height="56" viewBox="0 0 36 52" xmlns="http://www.w3.org/2000/svg" style="cursor:pointer">
+    <path d="M10,22 Q8,36 9,50 L27,50 Q28,36 26,22 Q22,20 18,20 Q14,20 10,22Z" fill="#2a1a0a" stroke="rgba(200,137,42,.4)" stroke-width=".8"/>
+    <path d="M18,22 L18,50" stroke="rgba(200,137,42,.18)" stroke-width=".5"/>
+    <path d="M9,30 Q6,34 5,42" stroke="rgba(200,137,42,.28)" stroke-width="1" fill="none"/>
+    <path d="M27,30 Q30,34 31,42" stroke="rgba(200,137,42,.28)" stroke-width="1" fill="none"/>
+    <ellipse cx="18" cy="13" rx="8" ry="9" fill="#2a1a0a" stroke="rgba(200,137,42,.4)" stroke-width=".8"/>
+    <rect x="10" y="5" width="16" height="2.5" rx="1" fill="#1a0e05" stroke="rgba(200,137,42,.4)" stroke-width=".6"/>
+    <rect x="12" y="1" width="12" height="5" rx="2" fill="#1a0e05" stroke="rgba(200,137,42,.4)" stroke-width=".6"/>
+    <circle cx="15" cy="13" r="1.2" fill="rgba(200,137,42,.6)"/><circle cx="21" cy="13" r="1.2" fill="rgba(200,137,42,.6)"/>
+  </svg>
+</div>
+
+<!-- v01.05: PROFILE PANEL (embedded in icon, appears on click) -->
+<div id="profile-panel" style="display:none;background:rgba(10,8,6,.98);border:1px solid rgba(200,137,42,.3);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.7);flex-direction:column;overflow:hidden;animation:slideUp .3s ease">
+  <div style="padding:16px;border-bottom:1px solid rgba(200,137,42,.2);display:flex;justify-content:space-between;align-items:center">
+    <div style="font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--amber)">nosirt</div>
+    <button onclick="closeProfilePanel()" style="background:none;border:none;color:var(--fog);font-size:1.2rem;cursor:pointer">✕</button>
+  </div>
+
+  <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px">
+    <!-- Bio section (editable if admin) -->
+    <div>
+      <div style="font-size:.75rem;color:var(--fog);opacity:.6;margin-bottom:6px;font-family:'Cinzel Decorative',serif">about</div>
+      <div id="profile-bio-display" style="font-family:'IM Fell English',serif;font-style:italic;font-size:.85rem;color:var(--cream);line-height:1.7">collector of strange things and quiet moments.</div>
+      <textarea id="profile-bio-edit" style="display:none;width:100%;min-height:70px;background:rgba(200,137,42,.08);border:1px solid rgba(200,137,42,.2);border-radius:6px;padding:8px;color:var(--cream);font-family:'IM Fell English',serif;font-size:.85rem;resize:vertical;margin-top:8px"></textarea>
+      <div id="profile-bio-buttons" style="display:none;gap:6px;margin-top:8px">
+        <button onclick="saveBioEdit()" class="sq-submit" style="flex:1;font-size:.75rem">save</button>
+        <button onclick="cancelBioEdit()" class="sq-cancel" style="flex:1;font-size:.75rem">cancel</button>
+      </div>
+      <button id="profile-bio-edit-btn" onclick="startBioEdit()" style="display:none;background:none;border:none;color:var(--amber);font-size:.7rem;cursor:pointer;margin-top:6px;font-family:'IM Fell English',serif;font-style:italic">edit</button>
+    </div>
+
+    <!-- Instagram link -->
+    <a href="https://instagram.com/nosirt" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:var(--amber);text-decoration:none;font-size:.75rem;border:1px solid rgba(200,137,42,.2);padding:8px 10px;border-radius:6px;transition:all .2s">
+      <span>📷</span>@nosirt
+    </a>
+
+    <!-- Version info -->
+    <div style="border-top:1px solid rgba(200,137,42,.15);padding-top:12px">
+      <div id="profile-version-display" style="font-family:'Cinzel Decorative',serif;font-size:.9rem;color:var(--amber);margin-bottom:8px"></div>
+      <div id="profile-changelog" style="display:none;max-height:150px;overflow-y:auto;font-size:.7rem;color:var(--fog);line-height:1.6">
+        <!-- populated if admin unlocked -->
+      </div>
+    </div>
+
+    <!-- v01.24: real account — sign in/up (single action, no password)
+         and, once logged in, the emoji "face" others see live. This is
+         a SEPARATE system from the admin login right below it — being
+         logged into an account never grants admin access, and vice
+         versa. The admin section underneath is untouched from before. -->
+    <div style="border-top:1px solid rgba(200,137,42,.15);padding-top:12px">
+      <div style="font-size:.75rem;color:var(--fog);opacity:.6;margin-bottom:8px;font-family:'Cinzel Decorative',serif">account</div>
+
+      <div id="account-logged-out" style="display:block">
+        <input type="text" id="account-username-input" class="sq-input" placeholder="pick a username" maxlength="20"
+          style="margin:0;font-size:.75rem;padding:6px 8px;height:28px;margin-bottom:8px"
+          onkeydown="if(event.key==='Enter')handleSignInOrUp()">
+        <button class="sq-submit" onclick="handleSignInOrUp()" style="width:100%;font-size:.75rem;padding:6px">sign in / sign up</button>
+        <div id="account-error" style="font-size:.65rem;color:#c85a5a;font-family:'IM Fell English',serif;font-style:italic;margin-top:6px"></div>
+        <div style="font-size:.65rem;color:var(--fog);opacity:.5;font-family:'IM Fell English',serif;font-style:italic;margin-top:6px">no password — this browser remembers you. new username creates an account, an existing one (that this browser made) logs back in.</div>
+      </div>
+
+      <div id="account-logged-in" style="display:none;text-align:center">
+        <!-- v01.27: curated emoji picker instead of raw keyboard -->
+        <div style="position:relative;display:inline-block;margin-bottom:6px">
+          <button onclick="toggleEmojiPicker()" style="background:none;border:none;cursor:pointer;line-height:1;padding:0" title="tap to change your face">
+            <span id="account-avatar-display" style="font-size:2rem">🙂</span>
+          </button>
+          <!-- Emoji picker panel -->
+          <div id="emoji-picker-panel" style="display:none;position:fixed;left:50%;transform:translateX(-50%);top:50%;margin-top:-160px;
+            width:280px;max-height:320px;overflow-y:auto;background:rgba(10,8,6,.97);
+            border:1px solid rgba(200,137,42,.3);border-radius:14px;padding:10px;
+            box-shadow:0 8px 32px rgba(0,0,0,.8);z-index:200;text-align:left">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(200,137,42,.15)">
+              <span style="font-size:.72rem;color:var(--amber);font-family:var(--font-title)">pick your face</span>
+              <button onclick="toggleEmojiPicker()" style="background:none;border:none;color:var(--fog);cursor:pointer;font-size:.9rem">✕</button>
+            </div>
+            <div id="emoji-picker-grid" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+          </div>
+        </div>
+        <div style="font-size:.6rem;color:var(--fog);opacity:.5;font-family:'IM Fell English',serif;font-style:italic;margin-bottom:8px">tap your face to change it</div>
+        <div id="account-name-display" style="font-family:'Cinzel Decorative',serif;font-size:.85rem;color:var(--amber);margin-bottom:10px"></div>
+        <button class="sq-submit" onclick="openPlaylistPanel()" style="width:100%;font-size:.75rem;margin-bottom:8px">🎵 my playlist</button>
+        <button class="sq-submit" onclick="handleAccountLogout()" style="width:100%;font-size:.75rem">log out</button>
+      </div>
+    </div>
+
+    <!-- Admin login section — collapsed under a disclosure so regular users don't see two login areas -->
+    <div style="border-top:1px solid rgba(200,137,42,.15);padding-top:12px">
+      <!-- Hidden by default; revealed only when admin toggle is clicked -->
+      <button id="admin-toggle-btn" onclick="toggleAdminSection()"
+        style="background:none;border:none;color:var(--fog);font-size:.62rem;font-family:'IM Fell English',serif;font-style:italic;opacity:.4;cursor:pointer;padding:0;display:block;margin:0 auto">
+        admin ▾
+      </button>
+      <div id="admin-section-body" style="display:none;margin-top:10px">
+        <div id="admin-login-form-profile" style="display:flex;flex-direction:column;gap:8px">
+          <input type="text" id="admin-username-profile" class="sq-input" placeholder="username" style="margin:0;font-size:.75rem;padding:6px 8px;height:28px">
+          <input type="password" id="admin-password-profile" class="sq-input" placeholder="password" style="margin:0;font-size:.75rem;padding:6px 8px;height:28px">
+          <button class="sq-submit" onclick="handleAdminLoginProfile()" style="font-size:.75rem;padding:6px">unlock</button>
+          <div id="admin-login-error-profile" style="font-size:.65rem;color:#c85a5a;font-family:'IM Fell English',serif;font-style:italic"></div>
+        </div>
+        <div id="admin-unlocked-view-profile" style="display:none;text-align:center">
+          <div style="font-size:.75rem;color:var(--amber);margin-bottom:10px;font-family:'Cinzel Decorative',serif">🔓 admin unlocked</div>
+          <button class="sq-submit" onclick="openAdminSettingsPanel()" style="width:100%;font-size:.75rem;margin-bottom:8px">⚙ open admin settings</button>
+          <button class="sq-submit" onclick="handleAdminLogoutProfile()" style="width:100%;font-size:.75rem">lock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- v01.16: full admin settings panel — tabbed, replaces the old
+     single stacked column of controls that used to live inside the
+     small profile sidebar. Launched via "open admin settings" above. -->
+<div id="admin-settings-panel">
+  <div class="admin-panel-inner">
+    <div class="admin-tabs">
+      <button id="admin-tabbtn-features" class="admin-tab-btn active" onclick="switchAdminTab('features')">features</button>
+      <button id="admin-tabbtn-chat" class="admin-tab-btn" onclick="switchAdminTab('chat')">chat</button>
+      <button id="admin-tabbtn-environment" class="admin-tab-btn" onclick="switchAdminTab('environment')">world</button>
+      <button id="admin-tabbtn-pixie" class="admin-tab-btn" onclick="switchAdminTab('pixie')">pixie</button>
+      <button id="admin-tabbtn-users" class="admin-tab-btn" onclick="switchAdminTab('users')">users</button>
+      <button id="admin-tabbtn-moderation" class="admin-tab-btn" onclick="switchAdminTab('moderation')">mod</button>
+      <button class="admin-panel-close" onclick="closeAdminSettingsPanel()">✕</button>
+    </div>
+
+    <div id="admin-tab-features" class="admin-tab-body" style="display:flex">
+      <div style="font-size:.7rem;color:var(--fog);opacity:.6;margin-bottom:10px;font-family:'Cinzel Decorative',serif">turn a world (or the welcome banner) off temporarily</div>
+      <div id="feature-toggle-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div id="admin-tab-chat" class="admin-tab-body" style="display:none">
+      <div id="chat-admin-settings"></div>
+    </div>
+
+    <div id="admin-tab-environment" class="admin-tab-body" style="display:none">
+      <div id="env-preview-controls"></div>
+    </div>
+
+    <div id="admin-tab-pixie" class="admin-tab-body" style="display:none">
+      <div id="pixie-admin-settings">
+        <div class="admin-placeholder">Pixie's settings (shorts source, dialogue tuning, etc.) will show up here as they're built out.</div>
+      </div>
+    </div>
+
+    <!-- v01.26: User list + view-as-user -->
+    <div id="admin-tab-users" class="admin-tab-body" style="display:none;flex-direction:column;gap:0">
+      <div style="font-size:.68rem;color:var(--fog);opacity:.6;margin-bottom:10px">click a user to inspect their content (read-only)</div>
+      <div id="admin-user-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+        <div class="admin-placeholder">loading users...</div>
+      </div>
+    </div>
+
+    <!-- v01.26: Moderation — delete chat msgs, posts, recs -->
+    <div id="admin-tab-moderation" class="admin-tab-body" style="display:none;flex-direction:column;gap:10px">
+      <div style="font-size:.68rem;color:var(--fog);opacity:.6;margin-bottom:4px">delete content from any user</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="sq-submit" onclick="adminLoadModQueue('chat')" style="font-size:.72rem">📋 load chat messages</button>
+        <button class="sq-submit" onclick="adminLoadModQueue('posts')" style="font-size:.72rem">📋 load tower posts</button>
+        <button class="sq-submit" onclick="adminLoadModQueue('recs')" style="font-size:.72rem">📋 load recommendations</button>
+      </div>
+      <div id="admin-mod-queue" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+    </div>
+
+    <div class="admin-panel-footer">
+      <button class="sq-submit" onclick="handleAdminLogoutProfile()" style="width:100%;font-size:.75rem">lock admin</button>
+    </div>
+  </div>
+</div>
+
+<div id="float-chat" onclick="openChatPanel()">
+  💬<span id="chat-unread-badge" class="chat-unread-badge" style="display:none">0</span>
+</div>
+
+<!-- v01.15: Pixie — wanders the screen on her own, draggable, tap opens
+     her panel. AI-backed responses (see pixie.js and pixie-chat.js) — built so
+     AI lives behind pixie-chat.js; getPixieResponse() is only the local fallback. -->
+<div id="pixie-icon" title="Chat with Pixie" onclick="if(!pixieMoved)openPixieDmThread()">🧚</div>
+
+<!-- Pixie panel removed v01.25 — Pixie now lives in the DM system (see dm.js/pixie.js) -->
+
+<!-- v01.15: environment sound (rain/wind/thunder) — standalone control,
+     deliberately NOT inside #map-tools (that whole container is force-
+     hidden — see styles.css — after zoom/recenter buttons were removed
+     since pinch/scroll zoom already covers that). This button stayed
+     accidentally hidden inside it before; it's independent now. -->
+<div id="env-sound-btn" onclick="toggleEnvVolumePopover()" title="environment sound (rain, wind, thunder)">🔊</div>
+<div id="env-volume-popover">
+  <div class="env-volume-head">
+    <span>sound controls</span>
+    <button class="chat-panel-close" onclick="toggleEnvVolumePopover()">✕</button>
+  </div>
+  <!-- Environment sounds slider -->
+  <div class="env-volume-sub" style="margin-bottom:4px">🌧 environment <span id="env-vol-pct" style="opacity:.5;font-size:.6rem">100%</span></div>
+  <input id="env-volume-slider" type="range" min="0" max="160" value="100" oninput="setEnvVolumeMultiplier(this.value/100);$('env-vol-pct').textContent=Math.round(this.value)+'%'">
+  <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--fog);opacity:.45;margin-bottom:12px">
+    <span>silent</span><span>louder</span>
+  </div>
+  <!-- Music / podcast slider — v01.27 -->
+  <div class="env-volume-sub" style="margin-bottom:4px">🎵 music &amp; podcast <span id="music-vol-pct" style="opacity:.5;font-size:.6rem">100%</span></div>
+  <input id="music-volume-slider" type="range" min="0" max="160" value="100" oninput="setMusicVolumeMultiplier(this.value/100);$('music-vol-pct').textContent=Math.round(this.value)+'%'">
+  <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--fog);opacity:.45">
+    <span>silent</span><span>louder</span>
+  </div>
+</div>
+
+<!-- v01.08: chat panel — Global Chat / Personal Chat / Carved in Stone -->
+<div id="chat-panel">
+  <div class="chat-panel-inner">
+    <div class="chat-tabs">
+      <button id="chat-tabbtn-global" class="chat-tab-btn active" onclick="switchChatTab('global')">global chat</button>
+      <button id="chat-tabbtn-personal" class="chat-tab-btn" onclick="switchChatTab('personal')">personal</button>
+      <button id="chat-tabbtn-stone" class="chat-tab-btn" onclick="switchChatTab('stone')">carved in stone</button>
+      <button class="chat-panel-close" onclick="closeChatPanel()">✕</button>
+    </div>
+
+    <!-- v01.09: who's online -->
+    <div class="chat-online-row">
+      <button id="chat-online-btn" class="chat-online-btn" onclick="toggleOnlineList()">
+        🟢 <span id="chat-online-count">0</span> online
+      </button>
+    </div>
+    <div id="chat-online-list" class="chat-online-list"></div>
+
+    <div id="chat-tab-global" class="chat-tab-body" style="display:flex">
+      <div id="chat-global-messages" class="chat-messages"></div>
+      <div id="gif-search-panel" class="gif-search-panel">
+        <div class="gif-search-head">
+          <input id="gif-search-input" type="text" placeholder="search GIFs…" oninput="onGifSearchInput(this.value)">
+          <button class="chat-panel-close" onclick="closeGifSearch()">✕</button>
+        </div>
+        <div id="gif-search-results" class="gif-search-results"></div>
+      </div>
+      <div class="chat-input-bar">
+        <button id="chat-media-btn" class="chat-media-btn" style="display:none" onclick="handleChatMediaBtn()"></button>
+        <input id="chat-image-input" type="file" accept="image/*" style="display:none" onchange="handleChatImageFileSelected(this)">
+        <button class="chat-send-btn" onclick="openSharePicker({type:'global'})" title="share something">📎</button>
+        <input id="chat-global-input" class="chat-text-input" type="text" placeholder="say something…" maxlength="500" onkeydown="handleChatInputKeydown(event)">
+        <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
+      </div>
+    </div>
+
+    <div id="chat-tab-personal" class="chat-tab-body" style="display:none;flex-direction:column"></div>
+
+    <div id="chat-tab-stone" class="chat-tab-body" style="display:none;flex-direction:column;align-items:center;justify-content:center">
+      <div class="stone-title">carved in stone</div>
+      <textarea id="stone-textarea" placeholder="write here. it stays with you." oninput="saveStoneDebounced()"></textarea>
+    </div>
+  </div>
+</div>
+
+<div id="castle-door">
+  <div class="castle-title" id="castle-door-title">nosirt's keep</div>
+  <div class="castle-phrase-box">
+    <div class="castle-q">the gate is sealed.<br>what is the secret phrase?</div>
+    <input id="castle-input" type="password" placeholder="speak it..." autocomplete="off" onkeydown="if(event.key==='Enter')tryCastle()">
+    <button class="castle-enter-btn" onclick="tryCastle()">enter →</button>
+    <div class="castle-wrong-msg" id="castle-wrong"></div>
+  </div>
+  <button class="castle-close" onclick="closeCastle()">turn back</button>
+</div>
+<div id="castle-interior">
+  <!-- LIBRARY VIEW -->
+  <div id="library-view" style="position:absolute;inset:0;display:flex;flex-direction:column;background:radial-gradient(ellipse at 30% 20%,#1a1208 0%,#0a0806 100%);">
+    <!-- Header -->
+    <div style="padding:14px 18px 10px;border-bottom:1px solid rgba(200,137,42,.15);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div id="castle-interior-title" style="font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--amber);letter-spacing:.1em">nosirt's keep</div>
+        <div id="castle-interior-subtitle" style="font-family:'IM Fell English',serif;font-style:italic;font-size:.7rem;color:var(--fog);opacity:.7;margin-top:2px">the library within</div>
+      </div>
+      <button onclick="closeInterior()" style="background:transparent;border:1px solid rgba(200,137,42,.2);border-radius:16px;padding:5px 12px;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;font-size:.75rem;cursor:pointer">leave ✕</button>
+    </div>
+    <!-- v01.26: keep view mode — "browse" (public library) vs "my works" (private folder) -->
+    <div style="display:flex;border-bottom:1px solid rgba(200,137,42,.12);flex-shrink:0">
+      <button id="keep-tab-browse" onclick="switchKeepView('browse')"
+        style="flex:1;background:rgba(200,137,42,.12);border:none;border-bottom:2px solid var(--amber);padding:8px;color:var(--cream);font-family:'IM Fell English',serif;font-style:italic;font-size:.78rem;cursor:pointer">
+        📚 browse
+      </button>
+      <button id="keep-tab-mine" onclick="switchKeepView('mine')"
+        style="flex:1;background:none;border:none;border-bottom:2px solid transparent;padding:8px;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;font-size:.78rem;cursor:pointer;display:none">
+        🔒 my works
+      </button>
+    </div>
+    <!-- Shelf tabs (shown in browse mode only) -->
+    <div id="keep-shelf-row" style="display:flex;gap:6px;padding:10px 18px 8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;border-bottom:1px solid rgba(200,137,42,.1)">
+      <div class="shelf-tab active" onclick="switchShelf('novels')" style="flex-shrink:0;padding:5px 12px;border-radius:16px;border:1px solid rgba(200,137,42,.35);background:rgba(200,137,42,.15);color:var(--cream);font-family:'IM Fell English',serif;font-style:italic;font-size:.75rem;cursor:pointer;white-space:nowrap">📖 novels</div>
+      <div class="shelf-tab" onclick="switchShelf('stories')" style="flex-shrink:0;padding:5px 12px;border-radius:16px;border:1px solid rgba(200,137,42,.2);background:transparent;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;font-size:.75rem;cursor:pointer;white-space:nowrap">📜 stories</div>
+      <div class="shelf-tab" onclick="switchShelf('poetry')" style="flex-shrink:0;padding:5px 12px;border-radius:16px;border:1px solid rgba(200,137,42,.2);background:transparent;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;font-size:.75rem;cursor:pointer;white-space:nowrap">🪶 poetry</div>
+      <div class="shelf-tab" onclick="switchShelf('other')" style="flex-shrink:0;padding:5px 12px;border-radius:16px;border:1px solid rgba(200,137,42,.2);background:transparent;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;font-size:.75rem;cursor:pointer;white-space:nowrap">✦ other</div>
+    </div>
+    <!-- Search + add -->
+    <div style="display:flex;gap:8px;padding:10px 18px;flex-shrink:0">
+      <input class="sq-input" id="lib-search" placeholder="search title, author, or genre..." oninput="renderBookList()" style="margin:0;flex:1">
+      <button class="wp-add-toggle" id="lib-add-btn" onclick="toggleAddStory()" style="display:none">+ add</button>
+    </div>
+    <!-- Add story panel -->
+    <div id="lib-add-panel" style="display:none;margin:0 18px 12px;background:rgba(20,15,10,.55);border:1px solid rgba(200,137,42,.18);border-radius:12px;padding:12px;flex-shrink:0;max-height:50vh;overflow-y:auto">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="lib-shelf" class="sq-select" style="flex:1">
+          <option value="novels">📖 novel</option>
+          <option value="stories">📜 story</option>
+          <option value="poetry">🪶 poetry</option>
+          <option value="other">✦ other</option>
+        </select>
+        <select id="lib-status" class="sq-select" style="flex:1">
+          <option value="completed">completed</option>
+          <option value="ongoing">ongoing</option>
+        </select>
+      </div>
+      <input class="sq-input" id="lib-title" placeholder="title...">
+      <input class="sq-input" id="lib-author" placeholder="author name...">
+      <input class="sq-input" id="lib-genre" list="genre-suggestions" placeholder="genre (type anything — fantasy, horror, etc.)">
+      <datalist id="genre-suggestions">
+        <option value="Fantasy"><option value="Sci-Fi"><option value="Romance"><option value="Horror">
+        <option value="Mystery"><option value="Drama"><option value="Comedy"><option value="Adventure">
+        <option value="Historical Fiction"><option value="Poetry"><option value="Other">
+      </datalist>
+      <textarea class="sq-textarea" id="lib-desc" placeholder="short description (optional)" style="min-height:48px"></textarea>
+      <div style="font-size:.7rem;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;margin:8px 0 4px">upload a .docx or .pdf — chapters are detected automatically</div>
+      <input type="file" id="lib-file" accept=".docx,.pdf" style="width:100%;color:var(--fog);font-size:.78rem;margin-bottom:8px">
+      <div style="font-size:.7rem;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;margin:4px 0">— or paste the text directly —</div>
+      <textarea class="sq-textarea" id="lib-paste" placeholder="paste your story here. tip: start a line with 'Chapter 1: ...' to mark chapter breaks." style="min-height:90px"></textarea>
+      <button class="sq-submit" onclick="publishStory()">publish to the keep →</button>
+    </div>
+    <!-- Book list -->
+    <div id="book-list" style="flex:1;overflow-y:auto;padding:0 18px 16px;display:flex;flex-direction:column;gap:12px">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- READER VIEW -->
+  <div id="reader-view" style="position:absolute;inset:0;display:none;flex-direction:column;background:radial-gradient(ellipse at 30% 20%,#1a1208 0%,#0a0806 100%);">
+    <!-- Reader header -->
+    <div style="padding:12px 16px 10px;border-bottom:1px solid rgba(200,137,42,.15);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="closeReader()" style="background:transparent;border:none;color:var(--amber);font-family:'IM Fell English',serif;font-style:italic;font-size:.8rem;cursor:pointer;flex-shrink:0">← library</button>
+      <div style="flex:1;overflow:hidden">
+        <div id="reader-title" style="font-family:'Cinzel Decorative',serif;font-size:.82rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="reader-meta" style="font-family:'IM Fell English',serif;font-style:italic;font-size:.7rem;color:var(--amber);opacity:.7;margin-top:1px"></div>
+      </div>
+      <button id="reader-add-ch-btn" onclick="toggleAddChapter()" style="display:none;background:rgba(200,137,42,.1);border:1px solid rgba(200,137,42,.2);border-radius:8px;padding:5px 9px;color:var(--fog);font-size:.7rem;cursor:pointer;flex-shrink:0;font-family:'IM Fell English',serif;font-style:italic">+ chapter</button>
+      <button onclick="toggleChapterNav()" style="background:rgba(200,137,42,.1);border:1px solid rgba(200,137,42,.2);border-radius:8px;padding:5px 10px;color:var(--fog);font-size:.75rem;cursor:pointer;flex-shrink:0">≡</button>
+    </div>
+    <!-- Add chapter panel -->
+    <div id="lib-add-chapter-panel" style="display:none;background:rgba(20,15,10,.7);border-bottom:1px solid rgba(200,137,42,.15);padding:12px 16px;flex-shrink:0;max-height:45vh;overflow-y:auto">
+      <input class="sq-input" id="ch-title" placeholder="chapter title (optional — auto-detected if left blank)">
+      <input type="file" id="ch-file" accept=".docx,.pdf" style="width:100%;color:var(--fog);font-size:.78rem;margin-bottom:8px">
+      <div style="font-size:.7rem;color:var(--fog);font-family:'IM Fell English',serif;font-style:italic;margin:4px 0">— or paste —</div>
+      <textarea class="sq-textarea" id="ch-paste" placeholder="paste the new chapter here..." style="min-height:70px"></textarea>
+      <button class="sq-submit" onclick="publishChapterToBook()">add to story →</button>
+    </div>
+    <!-- Chapter nav drawer -->
+    <div id="chapter-nav" style="display:none;background:rgba(8,6,4,.95);border-bottom:1px solid rgba(200,137,42,.15);padding:10px 16px;flex-shrink:0;max-height:40vh;overflow-y:auto">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:.78rem;color:var(--amber);margin-bottom:8px;opacity:.7">chapters</div>
+      <div id="chapter-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <!-- Reader content -->
+    <div id="reader-content" style="flex:1;overflow-y:auto;padding:20px 20px 40px;-webkit-overflow-scrolling:touch">
+      <!-- populated by JS -->
+    </div>
+    <!-- Reading progress -->
+    <div style="height:2px;background:rgba(200,137,42,.1);flex-shrink:0;position:relative">
+      <div id="read-progress" style="height:100%;background:rgba(200,137,42,.5);width:0%;transition:width .3s ease"></div>
+    </div>
+  </div>
+</div>
+
+<div id="music-modal">
+  <div class="modal-title">♪ sounds</div>
+  <div class="modal-sub">tap to play · tap again to stop</div>
+  <div class="music-options">
+    <div class="music-opt" data-key="ancient">
+      <span class="music-opt-icon" onclick="toggleMusic('ancient')">🏰</span>
+      <div onclick="toggleMusic('ancient')"><div class="music-opt-name">Ancient Ambience</div><div class="music-opt-type">built in · medieval drone & strings</div></div>
+      <button class="playlist-add-btn" onclick="event.stopPropagation();addToPlaylist({type:'ambient',key:'ancient',name:'Ancient Ambience'})" title="save to your playlist">+</button>
+    </div>
+    <div class="music-opt" data-key="lofi">
+      <span class="music-opt-icon" onclick="toggleMusic('lofi')">📻</span>
+      <div onclick="toggleMusic('lofi')"><div class="music-opt-name">Lofi Hip Hop</div><div class="music-opt-type">live · chill beats 24/7</div></div>
+      <button class="playlist-add-btn" onclick="event.stopPropagation();addToPlaylist({type:'ambient',key:'lofi',name:'Lofi Hip Hop'})" title="save to your playlist">+</button>
+    </div>
+    <div class="music-opt" data-key="dark">
+      <span class="music-opt-icon" onclick="toggleMusic('dark')">🌑</span>
+      <div onclick="toggleMusic('dark')"><div class="music-opt-name">Dark Ambient</div><div class="music-opt-type">live · eerie atmospheres</div></div>
+      <button class="playlist-add-btn" onclick="event.stopPropagation();addToPlaylist({type:'ambient',key:'dark',name:'Dark Ambient'})" title="save to your playlist">+</button>
+    </div>
+    <div class="music-opt" data-key="podcast" onclick="toggleMusic('podcast')">
+      <span class="music-opt-icon">🎙</span>
+      <div><div class="music-opt-name">The Wireless</div><div class="music-opt-type">your podcast · takes over from sounds</div></div>
+    </div>
+  </div>
+  <button class="modal-close" onclick="closeMusicModal()">close</button>
+</div>
+
+<!-- v01.24: personal playlist — "your own Spotify corner" -->
+<div id="playlist-panel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,8,6,.98);border:1px solid rgba(200,137,42,.3);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.7);z-index:110;flex-direction:column;overflow:hidden">
+  <div style="padding:14px;border-bottom:1px solid rgba(200,137,42,.15);display:flex;justify-content:space-between;align-items:center">
+    <div class="modal-title" style="margin:0">🎵 your playlist</div>
+    <button onclick="closePlaylistPanel()" style="background:none;border:none;color:var(--amber);font-size:1.2rem;cursor:pointer">✕</button>
+  </div>
+  <div style="display:flex;border-bottom:1px solid rgba(200,137,42,.15)">
+    <button class="playlist-panel-tab-btn active" data-tab="playing" onclick="switchPlaylistPanelTab('playing')" style="flex:1;background:none;border:none;padding:8px;color:var(--fog);font-size:.72rem;cursor:pointer">▶ playing</button>
+    <button class="playlist-panel-tab-btn" data-tab="saved" onclick="switchPlaylistPanelTab('saved')" style="flex:1;background:none;border:none;padding:8px;color:var(--fog);font-size:.72rem;cursor:pointer">🔖 saved</button>
+  </div>
+  <div id="playlist-items" style="flex:1;overflow-y:auto"></div>
+  <div id="playlist-saved-items" style="flex:1;overflow-y:auto;display:none"></div>
+  <div id="playlist-transport" style="display:none;padding:10px;border-top:1px solid rgba(200,137,42,.15);gap:8px;justify-content:center">
+    <button class="modal-close" onclick="playlistPrev()" style="margin:0;padding:6px 14px">⏮</button>
+    <button class="modal-close" onclick="playlistExit()" style="margin:0;padding:6px 14px">⏹ exit</button>
+    <button class="modal-close" onclick="playlistNext()" style="margin:0;padding:6px 14px">⏭</button>
+  </div>
+</div>
+
+<!-- v01.24: share picker — 📎 button in chat (global or DM) opens this -->
+<div id="share-picker-panel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,8,6,.98);border:1px solid rgba(200,137,42,.3);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.7);z-index:120;flex-direction:column;overflow:hidden">
+  <div style="padding:14px;border-bottom:1px solid rgba(200,137,42,.15);display:flex;justify-content:space-between;align-items:center">
+    <div class="modal-title" style="margin:0">📎 share</div>
+    <button onclick="closeSharePicker()" style="background:none;border:none;color:var(--amber);font-size:1.2rem;cursor:pointer">✕</button>
+  </div>
+  <div style="display:flex;border-bottom:1px solid rgba(200,137,42,.15)">
+    <button class="share-tab-btn active" data-tab="playlist" onclick="switchShareTab('playlist')" style="flex:1;background:none;border:none;padding:8px;color:var(--fog);font-size:.7rem;cursor:pointer">🎵 playlist</button>
+    <button class="share-tab-btn" data-tab="recs" onclick="switchShareTab('recs')" style="flex:1;background:none;border:none;padding:8px;color:var(--fog);font-size:.7rem;cursor:pointer">🎬 recs</button>
+    <button class="share-tab-btn" data-tab="posts" onclick="switchShareTab('posts')" style="flex:1;background:none;border:none;padding:8px;color:var(--fog);font-size:.7rem;cursor:pointer">🗼 posts</button>
+  </div>
+  <div id="share-tab-body" style="flex:1;overflow-y:auto"></div>
+</div>
+
+<!-- WIRELESS CALENDAR — book a recording slot -->
+<div id="wcal-modal">
+  <div class="wcal-panel">
+    <div class="wcal-head">
+      <div>
+        <div class="wcal-title">🎙 book the wireless</div>
+        <div class="wcal-sub">pick an open slot — first come, first served</div>
+      </div>
+      <button class="wcal-close-x" onclick="closeCalendarModal()" aria-label="close">✕</button>
+    </div>
+
+    <div class="wcal-legend">
+      <div class="wcal-legend-item"><span class="wcal-legend-dot open"></span> available</div>
+      <div class="wcal-legend-item"><span class="wcal-legend-dot taken"></span> taken</div>
+      <button class="wcal-admin-toggle" id="wcal-admin-toggle" onclick="toggleCalAdminPanel()">⚙ manage slots</button>
+    </div>
+
+    <div id="wcal-grid" class="wcal-grid"></div>
+    <div id="wcal-empty" class="wcal-empty" style="display:none">no slots yet — check back soon.</div>
+
+    <div id="wcal-claim-box" class="wcal-claim-box">
+      <div class="wcal-claim-label" id="wcal-claim-label">your name for this slot:</div>
+      <div class="wcal-claim-row">
+        <input class="sq-input" id="wcal-claim-name" placeholder="your name..." maxlength="40">
+        <button class="sq-submit" style="width:auto;padding:8px 16px" onclick="submitClaim()">claim →</button>
+      </div>
+    </div>
+
+    <div id="wcal-edit-box" class="wcal-claim-box">
+      <div class="wcal-claim-label" id="wcal-edit-name">edit slot</div>
+      <div class="wcal-admin-row">
+        <label>date</label>
+        <input class="sq-input" type="date" id="wcal-edit-date">
+      </div>
+      <div class="wcal-admin-row">
+        <label>start time</label>
+        <input class="sq-input" type="time" id="wcal-edit-start">
+      </div>
+      <div class="wcal-admin-row">
+        <label>end time</label>
+        <input class="sq-input" type="time" id="wcal-edit-end">
+      </div>
+      <div class="wcal-admin-actions">
+        <button class="sq-submit" style="width:auto;padding:8px 14px" onclick="saveSlotEdit()">save →</button>
+        <button class="wcal-mini-btn" id="wcal-edit-clear-btn" onclick="clearSlotClaim()" style="flex:0 0 auto;padding:8px 12px">reopen slot</button>
+        <button class="wcal-mini-btn danger" onclick="deleteSlot()" style="flex:0 0 auto;padding:8px 12px">remove</button>
+        <button class="wcal-mini-btn" onclick="closeAdminEdit()" style="flex:0 0 auto;padding:8px 12px">cancel</button>
+      </div>
+    </div>
+
+    <div id="wcal-admin-panel" class="wcal-admin-panel">
+      <div class="wcal-admin-title">recurring schedule</div>
+      <div class="wcal-admin-row">
+        <label>day</label>
+        <select class="sq-select" id="wcal-admin-day">
+          <option value="0">Sunday</option><option value="1">Monday</option>
+          <option value="2" selected>Tuesday</option><option value="3">Wednesday</option>
+          <option value="4">Thursday</option><option value="5">Friday</option>
+          <option value="6">Saturday</option>
+        </select>
+      </div>
+      <div class="wcal-admin-row">
+        <label>start time</label>
+        <input class="sq-input" type="time" id="wcal-admin-start" value="10:30">
+      </div>
+      <div class="wcal-admin-row">
+        <label>end time</label>
+        <input class="sq-input" type="time" id="wcal-admin-end" value="11:30">
+      </div>
+      <div class="wcal-admin-row">
+        <label># of slots</label>
+        <input class="sq-input" type="number" id="wcal-admin-count" min="1" max="20" value="4">
+      </div>
+      <div class="wcal-admin-actions">
+        <button class="sq-submit" style="width:auto;padding:8px 16px" onclick="applyCalPattern()">apply to all upcoming →</button>
+      </div>
+      <div class="wcal-admin-note">applying regenerates every unclaimed upcoming slot from today's date using this pattern. slots already claimed are left alone unless you clear them individually below.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+</div><!-- end #app -->
+<audio id="audio-player" loop></audio>
+
+<!-- External libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- Site scripts — core.js MUST load first, the rest can be in any order -->
+<script src="core.js"></script>
+<script src="version-history.js"></script>
+<script src="accounts.js"></script>
+<script src="map-canvas.js"></script>
+<script src="audio.js"></script>
+<script src="map-layout.js"></script>
+<script src="admin.js"></script>
+<script src="profile.js"></script>
+<script src="garden.js"></script>
+<script src="square.js"></script>
+<script src="tower.js"></script>
+<script src="keep.js"></script>
+<script src="wireless.js"></script>
+<script src="chat.js"></script>
+<script src="dm.js"></script>
+<script src="environment.js"></script>
+<script src="pixie.js"></script>
+<script src="playlist.js"></script>
+<script src="sharing.js"></script>
+
+</body>
+</html>
