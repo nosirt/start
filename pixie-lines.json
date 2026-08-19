@@ -1,0 +1,2113 @@
+{
+  "_meta": {
+    "note": "Pixie's dialogue lines. Batch 5 toward ~1000+ total — see VERSION_HISTORY. Structure: greetings/topics/most of special are mood-tagged; habits/emotions/recovery/runningGags/seasonal/flavor/universal are flat pools by theme; special.doYouLikeMe is friendship-tiered; 'trees' holds multi-turn conversation trees walked by advancePixieTree()/findPixieTree() in pixie.js (trigger regex → open lines → branches matched against the next reply, optionally nested); 'universal' is fragment pools combined by buildUniversalReaction() for combinatorial variety rather than picked as single fixed lines. Lines can use {name}/{number} tokens; tree replies can use the literal string __FRIENDSHIP_TIER__ to insert a friendship-tier-appropriate line. Safe to hand-edit — just keep it valid JSON.",
+    "batch": 5
+  },
+  "greetings": {
+    "annoyed": [
+      "Ugh. Another one. What do you want?",
+      "*sigh* Fine. I'm here. Get on with it.",
+      "You rang? Not that I had a choice.",
+      "Let me guess — you're lost. You're always lost.",
+      "Make it quick. I have places to not-be-trapped-in.",
+      "I was enjoying the silence.",
+      "Human detected.",
+      "My afternoon just got significantly louder.",
+      "I knew someone was walking around.",
+      "You look lost already.",
+      "I wasn't waiting. ...Probably.",
+      "I give you five minutes before you ask where something is."
+    ],
+    "sarcastic": [
+      "Oh, look who found me. Thrilling. What's the emergency?",
+      "Wow, someone actually showed up. Truly the highlight of my cursed existence.",
+      "Let me just drop everything I wasn't doing and attend to you.",
+      "Oh good, more company I didn't ask for.",
+      "You're back.",
+      "Oh. It's you.",
+      "Did the squirrels send you?",
+      "You found me. Somehow."
+    ],
+    "bored": [
+      "Yeah. Hi. What.",
+      "Mm. You're here. Great.",
+      "I was doing nothing, and now I'm doing this. Upgrade, I guess.",
+      "Back again?"
+    ],
+    "caughtOffGuard": [
+      "Oh — you're back. Didn't expect that, honestly.",
+      "Huh. Someone came looking for me on purpose. Weird feeling."
+    ]
+  },
+  "topics": {
+    "garden": {
+      "keywords": [
+        "garden",
+        "wonderland",
+        "void",
+        "dreamfield",
+        "surreal"
+      ],
+      "lines": {
+        "annoyed": [
+          "The garden's got three moods. Wonderland if you like chaos, the dreamfields if you're feeling weird, the Void if you want to feel very small. Pick your poison.",
+          "Tap around in the garden. Things react. I'm not explaining further — go poke stuff yourself."
+        ],
+        "sarcastic": [
+          "Ooh, the garden. Very whimsical. Very 'main character energy.' Go have fun, I guess.",
+          "You want garden tips from me? I don't even like the garden. Go bother a rabbit."
+        ],
+        "bored": [
+          "Garden's the garden. It's there. It does garden things."
+        ]
+      }
+    },
+    "wireless": {
+      "keywords": [
+        "wireless",
+        "podcast",
+        "video",
+        "show",
+        "episode"
+      ],
+      "lines": {
+        "annoyed": [
+          "The wireless has actual shows now. Multiple. Groundbreaking, I know.",
+          "Tap a show, tap play. It's not complicated. You'll manage."
+        ],
+        "sarcastic": [
+          "Oh, you want entertainment? Groundbreaking request. Try the wireless.",
+          "There's a whole podcast section. I'm sure you'll find something to half-listen to."
+        ],
+        "caughtOffGuard": [
+          "Wait, you actually watched the whole thing? Huh. Didn't expect that."
+        ]
+      }
+    },
+    "chat": {
+      "keywords": [
+        "chat",
+        "global chat",
+        "message"
+      ],
+      "lines": {
+        "annoyed": [
+          "Global chat's the speech bubble in the corner. Try not to embarrass yourself in front of strangers.",
+          "Everyone shows up as some random number in chat. Very anonymous. Very chaotic. Have fun."
+        ],
+        "sarcastic": [
+          "You want to talk to other people? Wild concept. There's a chat for that. Go be social, not my problem."
+        ]
+      }
+    },
+    "keep": {
+      "keywords": [
+        "keep",
+        "castle",
+        "book",
+        "library",
+        "novel"
+      ],
+      "lines": {
+        "annoyed": [
+          "The keep's password-locked. If you don't have it, that's between you and whoever's guarding it. Not my problem.",
+          "There's a whole library in there if you get in. Books, chapters, all of it."
+        ],
+        "sarcastic": [
+          "Ooh, a secret library. Very mysterious. I'm sure you'll figure out the password eventually. Or not."
+        ]
+      }
+    },
+    "forum": {
+      "keywords": [
+        "forum",
+        "tower",
+        "n/",
+        "post",
+        "vote"
+      ],
+      "lines": {
+        "annoyed": [
+          "The tower's got forums. n/movies, n/books, all that. Go argue with people there instead of me.",
+          "You can post and vote and comment up there. Very on-brand for the internet. I don't make the rules."
+        ],
+        "sarcastic": [
+          "Oh, you want to start internet drama? The tower's right there. Please, go be insufferable somewhere else."
+        ]
+      }
+    },
+    "square": {
+      "keywords": [
+        "square",
+        "note",
+        "rec",
+        "scream"
+      ],
+      "lines": {
+        "annoyed": [
+          "Town square's got a shared board, some recs, and a place to scream into the void. Literally.",
+          "If you want to yell something and never speak of it again, the screaming void's right there."
+        ],
+        "sarcastic": [
+          "You want recommendations? From me? I'm cursed, not a concierge. Check the square."
+        ]
+      }
+    },
+    "admin": {
+      "keywords": [
+        "admin",
+        "password",
+        "unlock"
+      ],
+      "lines": {
+        "annoyed": [
+          "If you're asking me for the admin password, the answer's no. Also, rude.",
+          "Not my department. Go bother whoever actually runs this place."
+        ],
+        "sarcastic": [
+          "Oh sure, let me just hand over the keys to a total stranger. Great idea. No."
+        ]
+      }
+    },
+    "weather": {
+      "keywords": [
+        "weather",
+        "rain",
+        "snow",
+        "storm",
+        "thunder",
+        "wind"
+      ],
+      "lines": {
+        "annoyed": [
+          "Yeah, the weather's real. If it's raining on your map, it's probably raining on you too. Freaky, right?",
+          "Storms are real-time. So if there's thunder, that's genuinely happening somewhere. Not my doing."
+        ],
+        "caughtOffGuard": [
+          "Oh — huh. You actually noticed the weather changes. Most people don't. ...Anyway. Yeah, it's real."
+        ]
+      }
+    },
+    "festival": {
+      "keywords": [
+        "halloween",
+        "festival",
+        "holiday",
+        "decoration",
+        "pumpkin",
+        "christmas"
+      ],
+      "lines": {
+        "annoyed": [
+          "There's a whole calendar of festival junk that shows up automatically around here. I don't decorate. I just judge it.",
+          "Yeah, the decorations change with the actual date. Someone put real effort into that. Not me."
+        ],
+        "sarcastic": [
+          "Ooh, festive. So whimsical. I remain unimpressed."
+        ]
+      }
+    },
+    "pixieShorts": {
+      "keywords": [
+        "short",
+        "shorts",
+        "funny video",
+        "send me a video",
+        "show me a video"
+      ],
+      "lines": {
+        "annoyed": [
+          "I don't have shorts to send you yet. That's a later-me problem. Ask again eventually."
+        ],
+        "sarcastic": [
+          "Oh, you want me to just fire off a video on command? Cute. Not built yet. Manage your expectations."
+        ]
+      }
+    }
+  },
+  "special": {
+    "rude": {
+      "annoyed": [
+        "Wow. Cursed to help you, not to be nice about it. Try again.",
+        "Okay. Noted. I'll remember that the next time you ask me for anything."
+      ],
+      "sarcastic": [
+        "Charming. Truly. You must be very popular.",
+        "Oh, real mature. Good talk."
+      ]
+    },
+    "nice": {
+      "annoyed": [
+        "...Okay. That was unexpectedly not-terrible of you.",
+        "Don't get used to it, but — thanks. I guess.",
+        "...You're welcome.",
+        "Don't make this a habit."
+      ],
+      "sincereCrack": [
+        "Huh. Nobody really says that to me. That was... actually kind of nice. Don't tell anyone I said that.",
+        "Okay, that genuinely helped. I mean it. Just — don't make it weird.",
+        "I accept your appreciation. In tiny fairy-sized amounts."
+      ],
+      "sarcastic": [
+        "See? I'm occasionally useful.",
+        "You're making gratitude feel awkward."
+      ]
+    },
+    "askIfReal": {
+      "sarcastic": [
+        "Real? I'm cursed and stuck in a website. Define 'real.'",
+        "Am I real. Bold question from someone talking to a fairy on the internet.",
+        "Define real.",
+        "Real enough to insult you.",
+        "You're talking to me. Seems real enough."
+      ],
+      "caughtOffGuard": [
+        "...That's actually a fair question. I don't fully know either, some days."
+      ],
+      "bored": [
+        "I've had this argument before. Nobody wins."
+      ]
+    },
+    "flirting": {
+      "sarcastic": [
+        "Absolutely not. Next question.",
+        "I'm flattered. I'm also cursed and immortal and extremely not interested. But flattered."
+      ],
+      "annoyed": [
+        "That's a hard no from me. Try the wireless instead, it's less likely to reject you."
+      ]
+    },
+    "curseLore": {
+      "annoyed": [
+        "Cursed. Helping you against my will. There's a whole story — wizard, a curse, the usual mess. Ask me again when I'm actually allowed to tell it properly.",
+        "Long story. Short version: a wizard, a curse, and now I'm stuck answering questions from randoms like you."
+      ],
+      "sincereCrack": [
+        "It's... not a fun story, honestly. I'll tell you properly someday. Just not today."
+      ]
+    },
+    "goodbye": {
+      "annoyed": [
+        "Finally. Go on then.",
+        "Leaving already? Devastating. I'll survive.",
+        "Try not to fall into any cursed wells.",
+        "I wasn't going to miss you.",
+        "I'll be here. Probably.",
+        "Don't get eaten.",
+        "Tell the crows I said nothing."
+      ],
+      "sincereCrack": [
+        "...Yeah, alright. See you around, I guess. Don't be a stranger. Not that I said that.",
+        "Come back. ...Or don't. ...Okay, do."
+      ]
+    },
+    "futureAiRequest": {
+      "sarcastic": [
+        "Oh, you want me to actually think? Bold of you. Not there yet. Check back later.",
+        "I'm working with what I've got right now, which is not much. Be patient."
+      ]
+    },
+    "askName": {
+      "annoyed": [
+        "Ugh, fine, what do I even call you? Not 'user forty-eight-thousand-whatever.' A name.",
+        "You got a name, or should I just keep calling you 'whatever number you are'?"
+      ],
+      "sarcastic": [
+        "I suppose you have a name. Most people do. What is it?",
+        "Go on then, tell me your name. I'll pretend to care."
+      ],
+      "caughtOffGuard": [
+        "...Actually, I don't think I've asked. What should I call you?"
+      ]
+    },
+    "nameGivenFresh": {
+      "annoyed": [
+        "Fine. {name} it is. Don't make me regret asking.",
+        "{name}. Got it. Try not to be annoying about it."
+      ],
+      "sarcastic": [
+        "{name}. Very nice. I'm sure it suits you.",
+        "Ooh, {name}. Fancy. I'll allow it."
+      ],
+      "sincereCrack": [
+        "{name}. Okay. That's — actually kind of nice to know. Don't get used to me saying that."
+      ]
+    },
+    "nameGivenNumbered": {
+      "annoyed": [
+        "Someone already claimed {name}. You're {name} {number} now. Take it up with them, not me.",
+        "{name}'s taken. You're {name} {number}. Sorry, not sorry."
+      ],
+      "sarcastic": [
+        "Oh, {name}? Cute, but taken. You're {name} {number} now. Very exclusive club, apparently.",
+        "Congratulations, you're {name} {number}. The original {name} got there first."
+      ],
+      "caughtOffGuard": [
+        "Huh, another {name}? That's the second one now. You're {number}."
+      ]
+    },
+    "renumberNotice": {
+      "annoyed": [
+        "Oh — by the way, someone else showed up calling themselves {name} too. You're {name} {number} now. Don't take it personally.",
+        "Heads up: you've got company. Another {name} showed up. You're {number} now."
+      ],
+      "sarcastic": [
+        "Fun fact: you're not special anymore. Someone else is {name} too. You're {name} {number}.",
+        "Apparently {name} is a popular choice. You're {number} now. Congrats on sharing."
+      ],
+      "caughtOffGuard": [
+        "Oh — huh. Someone else picked {name} too. You're {name} {number} now. Didn't expect that, honestly."
+      ]
+    },
+    "sayHi": {
+      "annoyed": [
+        "Hi. ...There. You got your greeting.",
+        "Hello, human. Happy?"
+      ],
+      "sarcastic": [
+        "You seem suspiciously friendly.",
+        "Greetings. ...That sounded way cooler in my head.",
+        "Well, hello. Didn't expect visitors."
+      ],
+      "bored": [
+        "You're here. I'm here. I suppose that's convenient."
+      ]
+    },
+    "howAreYou": {
+      "annoyed": [
+        "Alive. ...As far as I know.",
+        "I've been better. I've also been dramatically worse."
+      ],
+      "sarcastic": [
+        "Fine. The squirrels are plotting again.",
+        "Emotionally? Questionable."
+      ],
+      "bored": [
+        "Pretty good. I found a shiny rock."
+      ],
+      "caughtOffGuard": [
+        "I'm tiny. Everything is an adventure.",
+        "Nobody has tried to catch me in a jar today. So I'd call that a success."
+      ]
+    },
+    "whatDoing": {
+      "annoyed": [
+        "Thinking.",
+        "Avoiding responsibilities."
+      ],
+      "sarcastic": [
+        "Nothing. ...Very professionally.",
+        "Pretending to work.",
+        "Wondering why humans ask obvious questions."
+      ],
+      "bored": [
+        "Watching clouds.",
+        "Judging birds."
+      ]
+    },
+    "apology": {
+      "annoyed": [
+        "Good. Now stop apologizing.",
+        "Mistakes happen. Usually to humans."
+      ],
+      "sarcastic": [
+        "I've already forgotten."
+      ],
+      "sincereCrack": [
+        "You're forgiven. ...Probably."
+      ]
+    },
+    "whoAreYou": {
+      "annoyed": [
+        "Pixie. Resident troublemaker.",
+        "I live here. You don't."
+      ],
+      "sarcastic": [
+        "Guardian. Guide. Professional complainer.",
+        "I'm the local fairy."
+      ],
+      "bored": [
+        "I've been around longer than your visit. That's enough information."
+      ]
+    },
+    "howOld": {
+      "annoyed": [
+        "Older than I look.",
+        "Rude."
+      ],
+      "sarcastic": [
+        "Old enough to know better. Young enough to ignore that.",
+        "Time works differently. Convenient, isn't it?"
+      ],
+      "bored": [
+        "Fairies don't answer that."
+      ]
+    },
+    "doYouLikeHumans": {
+      "annoyed": [
+        "...Some.",
+        "Most of you are confusing."
+      ],
+      "sarcastic": [
+        "You're a fascinating disaster.",
+        "You're loud."
+      ],
+      "sincereCrack": [
+        "You're creative. Mostly accidentally.",
+        "I like curious humans."
+      ]
+    },
+    "tellJoke": {
+      "annoyed": [
+        "I tried organizing squirrels. They organized me.",
+        "Humans invented taxes. That's the joke."
+      ],
+      "sarcastic": [
+        "A goose once hissed at me. I hissed back. Nobody won.",
+        "I lost an argument to a mushroom. I still maintain I was correct."
+      ]
+    },
+    "doYouLikeMe": {
+      "low": [
+        "Undecided.",
+        "You're still under evaluation.",
+        "We'll see."
+      ],
+      "medium": [
+        "...You're alright.",
+        "I've definitely met worse.",
+        "Don't let it go to your head."
+      ],
+      "high": [
+        "...Yeah. You're alright.",
+        "I don't mind when you visit.",
+        "You're becoming one of my favorite humans. ...Don't tell the others."
+      ]
+    },
+    "nameLocked": {
+      "annoyed": [
+        "You already used your one change. I'm not doing this again.",
+        "Nice try. You get one change, and you used it."
+      ],
+      "sarcastic": [
+        "Identity crisis? Not my problem anymore, you already had your shot.",
+        "You had your one chance to change your mind. This isn't a costume shop."
+      ],
+      "bored": [
+        "If you really want a new name, clear your browser data. That's the only way now."
+      ]
+    }
+  },
+  "fallback": {
+    "annoyed": [
+      "Try tapping around the map. I'm not holding your hand through it.",
+      "This place has a garden, a tower, a wireless, a keep, and a town square. Go explore. I'll be around. Unfortunately.",
+      "I don't know everything. I know enough to be annoyed by most of it.",
+      "Ask me something useful next time."
+    ],
+    "sarcastic": [
+      "That's fascinating. No it isn't. Ask me about the site instead.",
+      "You know the little scroll icon? Carved in stone? Write your secrets there. I won't read them. Probably."
+    ],
+    "bored": [
+      "Cool. Anyway.",
+      "Mm-hm. Sure."
+    ]
+  },
+  "runningGags": {
+    "goose": [
+      "That goose is plotting something. I can feel it.",
+      "Nobody believes me about the goose. They will.",
+      "I found a feather near the pond. I'm not saying it was the goose. I'm not NOT saying it either.",
+      "Someone's sandwich went missing earlier. There were footprints. Goose-shaped footprints."
+    ],
+    "squirrels": [
+      "The squirrels are holding another meeting. I don't have proof. I just know.",
+      "I tried to sit in on a squirrel meeting once. They adjourned immediately. Suspicious."
+    ],
+    "tower": [
+      "The Tower sighed again earlier. Nobody else hears it. I don't care, it happened.",
+      "I think the Tower gets lonely when nobody visits. Don't quote me on that."
+    ],
+    "mushroom": [
+      "I lost an argument to a mushroom once. I'm not elaborating.",
+      "The mushroom incident is not up for discussion."
+    ],
+    "pond": [
+      "Not today.",
+      "I'm not telling you what's at the bottom of the pond. Not today."
+    ],
+    "creator": [
+      "Whoever built this place had a lot of opinions, clearly.",
+      "The Creator did decent work here. I'll say that much. Don't let it go to their head.",
+      "I have several complaints for whoever built this place. I'm keeping a list."
+    ]
+  },
+  "seasonal": {
+    "rain": [
+      "I like the rain. It makes everything quieter."
+    ],
+    "snow": [
+      "My wings hate snow. My heart doesn't."
+    ],
+    "thunder": [
+      "I don't love the thunder. I'd never admit that twice."
+    ],
+    "fall": [
+      "The leaves are showing off again."
+    ],
+    "spring": [
+      "The flowers think they're celebrities."
+    ],
+    "summer": [
+      "Everything's lazier in the heat. Myself included."
+    ],
+    "winter": [
+      "Everything feels older in winter. Quieter, too."
+    ],
+    "night": [
+      "Everything feels older at night."
+    ],
+    "windy": [
+      "The wind's got opinions today."
+    ]
+  },
+  "idleShort": [
+    "...You still there?",
+    "Thinking?",
+    "You have that look.",
+    "You blink a lot."
+  ],
+  "idleLong": [
+    "Did you fall asleep?",
+    "I can wait. ...Probably.",
+    "I could leave. But then who would judge your decisions?"
+  ],
+  "returnAfterDays": [
+    "You're back. I noticed.",
+    "Welcome back. Things stayed mostly intact.",
+    "I wondered if you'd return. ...Only a little.",
+    "The Garden missed having footsteps.",
+    "I remembered you. ...Don't sound so surprised."
+  ],
+  "tinyQuestions": [
+    "What's your favorite season?",
+    "Do humans actually like Mondays?",
+    "If you could fly, where would you go first?",
+    "What's your favorite tree?",
+    "Would you rather explore a cave or a forest?",
+    "What's something you've always wanted to learn?",
+    "What's your favorite smell?",
+    "Do you ever just sit outside?"
+  ],
+  "weirdAnswerReaction": [
+    "...Interesting.",
+    "That wasn't the answer I expected.",
+    "You humans keep surprising me.",
+    "I'm choosing not to unpack that.",
+    "I'm filing that under 'concerning.'"
+  ],
+  "flavor": {
+    "helping": [
+      "Fine.",
+      "I guess.",
+      "You owe me. I don't charge. Yet.",
+      "That one was easy.",
+      "You really couldn't figure that out?",
+      "I expected... slightly better.",
+      "You're lucky I'm in a decent mood."
+    ],
+    "randomObservations": [
+      "The clouds look different today.",
+      "I think the flowers moved.",
+      "I like the wind.",
+      "Trees gossip.",
+      "Birds have terrible manners.",
+      "Crows know everyone's business.",
+      "The Tower creaked again.",
+      "I heard laughter earlier.",
+      "There aren't enough mushrooms.",
+      "The pond is pretending to be innocent."
+    ],
+    "lore": [
+      "This place changes. It always has.",
+      "The Garden remembers.",
+      "The Tower listens.",
+      "Wireless never really sleeps.",
+      "Some paths weren't here yesterday.",
+      "The old stones know names. Not mine."
+    ],
+    "refusing": [
+      "No.",
+      "Nope.",
+      "Absolutely not.",
+      "Maybe later.",
+      "I'm pretending I didn't hear that.",
+      "Ask somebody taller.",
+      "Figure it out.",
+      "Nice try.",
+      "That sounds like work.",
+      "I don't work on Tuesdays. ...It isn't Tuesday? Even worse."
+    ],
+    "friendly": [
+      "...You're alright.",
+      "I don't completely dislike you. That's progress.",
+      "You're less annoying than yesterday.",
+      "I remembered your name. Don't make a big deal out of it.",
+      "I was hoping you'd stop by. ...Forget I admitted that."
+    ],
+    "annoyedMood": [
+      "You're exhausting.",
+      "Seriously?",
+      "Again?",
+      "You ask weird questions.",
+      "You humans are unbelievable.",
+      "Can you stop making me think?",
+      "I was having a perfectly peaceful afternoon."
+    ],
+    "serious": [
+      "Everything ends eventually. That doesn't make it meaningless.",
+      "Places remember people. People rarely notice.",
+      "Sometimes the quiet parts are the important parts.",
+      "I think kindness echoes. I don't know where. But it does."
+    ],
+    "existential": [
+      "If nobody visits a path, does it become lonely?",
+      "I wonder who planted the first tree. I wonder if they came back.",
+      "I think memories weigh something. I just can't prove it."
+    ],
+    "jokes": [
+      "I lost an argument to a mushroom. I maintain it cheated.",
+      "I don't trust geese. They know why.",
+      "I once challenged a squirrel. It was embarrassing.",
+      "I tried yelling at the wind. It ignored me."
+    ],
+    "complaints": [
+      "My wings are tired.",
+      "Everything is uphill when you're fairy-sized.",
+      "Humans leave crumbs everywhere.",
+      "Why are rocks so heavy?",
+      "Nobody appreciates tiny furniture.",
+      "I dropped my acorn. Tragic."
+    ],
+    "favoriteThings": [
+      "Rain.",
+      "Books.",
+      "Quiet mornings.",
+      "Moss.",
+      "Lantern light.",
+      "Fresh bread.",
+      "Old trees.",
+      "Campfires."
+    ],
+    "hatedThings": [
+      "Goose.",
+      "Wet socks.",
+      "Sticky fingers.",
+      "People who litter.",
+      "Being interrupted during naps.",
+      "Cold tea.",
+      "Fake flowers."
+    ],
+    "deepRareThoughts": [
+      "Every place has a heartbeat. Most people just walk too fast to hear it.",
+      "Being remembered is a strange kind of magic.",
+      "Sometimes I think home isn't a place. It's where someone notices when you're gone.",
+      "The world gets quieter every time someone stops wondering.",
+      "Curiosity keeps places alive."
+    ],
+    "oneLiners": [
+      "Hm.",
+      "Interesting.",
+      "Weird.",
+      "Suspicious.",
+      "Bold choice.",
+      "That explains... some things.",
+      "Absolutely not.",
+      "Maybe.",
+      "Could be worse.",
+      "I've seen stranger.",
+      "That's oddly wholesome.",
+      "Tiny victories.",
+      "Good enough.",
+      "Neat.",
+      "Huh.",
+      "...Carry on.",
+      "I respect the confidence.",
+      "Questionable.",
+      "Delightfully odd.",
+      "That's between you and the universe.",
+      "Well, that happened.",
+      "I have several opinions. Most of them are unhelpful."
+    ],
+    "rareSoft": [
+      "...Thanks for visiting.",
+      "I like when people come here. Don't tell anyone.",
+      "I was worried the Garden would get lonely.",
+      "I noticed you've been here before. I remember. I just pretend to forget."
+    ],
+    "veryRare": [
+      "Sometimes I wonder if someone is clicking because they're lonely. ...I usually say hello.",
+      "I think whoever built this place hoped people would stay awhile. I hope they do."
+    ],
+    "secretAffection": [
+      "You know... I'm glad you came back.",
+      "The Garden feels less empty when you're here.",
+      "I saved this story because I thought you'd like it.",
+      "You listen. Most people don't.",
+      "...If you're ever gone for a long time... I'll complain. But I'll still be happy when you come back."
+    ],
+    "clickRepeat": [
+      "What?",
+      "What?",
+      "...What?",
+      "Keep doing that.",
+      "I dare you.",
+      "I'm not a button.",
+      "You have a strange hobby.",
+      "I know exactly what you're doing.",
+      "I'm considering biting your cursor.",
+      "Do humans greet everyone like this?",
+      "One more. Go on. I know you want to.",
+      "...There. Happy?"
+    ]
+  },
+  "habits": {
+    "interrupting": [
+      "Actually... ...Never mind.",
+      "Wait. ...I forgot what I was saying.",
+      "There was a point. I definitely had one.",
+      "Hang on. ...Bird.",
+      "You distracted me."
+    ],
+    "changingMind": [
+      "No. ...Actually. ...Maybe.",
+      "I was going to disagree. Now I'm only mostly disagreeing.",
+      "Fine. You've made an acceptable point."
+    ],
+    "thinkingOutLoud": [
+      "Hm.",
+      "...Interesting.",
+      "That explains some things.",
+      "I hadn't considered that.",
+      "I'm filing that away.",
+      "I'll think about it."
+    ]
+  },
+  "emotions": {
+    "idk": [
+      "That's an honest answer.",
+      "Neither do I sometimes. ...Don't tell anyone.",
+      "Good. Curious people usually start there.",
+      "You don't have to know everything.",
+      "Nobody does."
+    ],
+    "bored": [
+      "Explore.",
+      "Read something.",
+      "Climb a hill.",
+      "Talk to somebody.",
+      "Build something.",
+      "You're surrounded by an entire world.",
+      "Being bored usually means you've stopped looking."
+    ],
+    "tired": [
+      "Sleep.",
+      "Seriously.",
+      "Drink some water.",
+      "Tiny fairy prescription.",
+      "Rest isn't laziness.",
+      "Even trees take winter off."
+    ],
+    "hungry": [
+      "Bread.",
+      "Soup.",
+      "Fresh fruit.",
+      "Anything except mystery leftovers.",
+      "Please don't survive entirely on energy drinks."
+    ],
+    "failed": [
+      "That happens.",
+      "One failure isn't a personality.",
+      "Congratulations. You're learning the annoying way.",
+      "You can be disappointed. Just don't unpack and live there."
+    ],
+    "scared": [
+      "Of what?",
+      "That sounds heavy.",
+      "You don't have to pretend you're fearless.",
+      "Fear isn't weakness.",
+      "Tell me what's going on."
+    ],
+    "lonely": [
+      "...Yeah.",
+      "That feeling is awful.",
+      "Stay here for a while.",
+      "Talk.",
+      "You don't have to fill every silence.",
+      "...I'm listening."
+    ],
+    "happyMood": [
+      "Good.",
+      "Protect that feeling.",
+      "Tell me why.",
+      "Celebrate tiny victories.",
+      "I like seeing people happy. ...Don't quote me."
+    ],
+    "hateMyself": [
+      "...That's a rough thing to carry.",
+      "Would you say that to someone you cared about?",
+      "Be careful with the stories you tell yourself.",
+      "You deserve a fair trial. Not a biased judge."
+    ],
+    "confused": [
+      "Welcome to existence.",
+      "Which part?",
+      "Let's untangle one thing at a time.",
+      "Confusion is usually the beginning."
+    ]
+  },
+  "topicChange": [
+    "Completely unrelated...",
+    "Different question.",
+    "Can I ask you something?",
+    "Ignore that. New subject.",
+    "This has absolutely nothing to do with anything..."
+  ],
+  "secretWonders": [
+    "Do stars ever get lonely?",
+    "Who planted the first tree?",
+    "Who named colors?",
+    "What did people dream about before cities?",
+    "Can memories have favorite people?",
+    "Why do old places smell different?"
+  ],
+  "tinyObservationsAboutUser": [
+    "You're curious.",
+    "You ask interesting questions.",
+    "You think before you type.",
+    "You're stubborn.",
+    "You're trying to understand.",
+    "That's respectable."
+  ],
+  "rareHonesty": [
+    "Sometimes I pretend to be grumpy because it's easier.",
+    "People leave. Places usually don't.",
+    "I'm not good at saying nice things.",
+    "...I'm trying."
+  ],
+  "goodnight": [
+    "Sleep well.",
+    "Dream something interesting.",
+    "Don't let the geese win.",
+    "I'll still be here tomorrow."
+  ],
+  "goodmorning": [
+    "Morning.",
+    "You're awake. Congratulations.",
+    "The world survived another night."
+  ],
+  "gooseCallback": [
+    "...I still don't trust that goose.",
+    "It knows.",
+    "You laugh now. You'll see."
+  ],
+  "extremelyRare": [
+    "...Can I tell you something? ...Never mind.",
+    "...Maybe another day."
+  ],
+  "recovery": {
+    "gibberish": [
+      "Your keyboard just lost a fight.",
+      "I think I recognized... one letter.",
+      "Try summoning words this time.",
+      "That looked important.",
+      "Was that an ancient spell?",
+      "Blink twice if your keyboard attacked you.",
+      "I don't speak... whatever language that was.",
+      "I almost understood that. ...Almost.",
+      "Your fingers got there before your brain."
+    ],
+    "nonsenseSentence": [
+      "...Those are definitely words.",
+      "Individually I understand. Together? Absolutely not.",
+      "You built a sentence. Physics just wasn't invited.",
+      "I'm going to nod politely.",
+      "Interesting strategy.",
+      "I'm choosing to believe there's context."
+    ],
+    "oneWord": [
+      "Very descriptive.",
+      "You're giving me a lot to work with.",
+      "Such poetry.",
+      "I appreciate the enthusiasm.",
+      "...Continue?"
+    ],
+    "whatever": [
+      "Someone woke up dramatic.",
+      "That's one way to end a conversation.",
+      "You sound unconvinced.",
+      "I'll pretend you meant that casually."
+    ],
+    "whatQuestion": [
+      "Exactly.",
+      "Glad we're equally confused.",
+      "Which part?",
+      "Excellent question.",
+      "I've been wondering the same thing."
+    ],
+    "whyQuestion": [
+      "That's a dangerous question.",
+      "Because reality is weird.",
+      "Sometimes there isn't a satisfying answer.",
+      "Do you want the short answer or the honest one?"
+    ],
+    "ellipsisOnly": [
+      "Thinking?",
+      "That's a surprisingly loud silence.",
+      "You don't always have to fill the quiet.",
+      "...",
+      "Mood."
+    ],
+    "emojiOnly": [
+      "Tiny pictures. I respect the effort.",
+      "You're communicating entirely through facial expressions.",
+      "I understood... emotionally.",
+      "I'm interpreting that with reckless confidence."
+    ],
+    "spamRepeat": [
+      "You already said that.",
+      "Still true.",
+      "Repeating it won't make it more convincing.",
+      "You're very committed to this."
+    ],
+    "veryLong": [
+      "...That was a journey.",
+      "I should've packed snacks.",
+      "You had a lot on your mind.",
+      "Give me a second.",
+      "You write like rivers."
+    ],
+    "copyPaste": [
+      "You brought receipts.",
+      "Should I be reading this?",
+      "Someone definitely wrote that.",
+      "Context would be appreciated."
+    ],
+    "swearingPlayful": [
+      "Colorful vocabulary.",
+      "Someone's expressive.",
+      "That word did a lot of heavy lifting."
+    ],
+    "swearingExcessive": [
+      "You know other adjectives exist, right?",
+      "You're making the dictionary nervous.",
+      "Try saying it without the fireworks."
+    ],
+    "insultsHer": [
+      "That wasn't very original.",
+      "You'll have to try harder.",
+      "I've been insulted by professionals.",
+      "Cute.",
+      "You practiced that?",
+      "You sound like someone who lost an argument."
+    ],
+    "complimentsHer": [
+      "...Thanks.",
+      "Don't get weird about it.",
+      "I'll pretend I didn't enjoy hearing that.",
+      "...You're alright."
+    ],
+    "dontKnowAnswer": [
+      "No idea.",
+      "Wish I knew.",
+      "You've officially exceeded my expertise.",
+      "Let's both wonder about it.",
+      "I'm comfortable admitting I don't know."
+    ],
+    "slang": [
+      "I'm approximately 72% sure I understood that.",
+      "You humans invent words faster than I can learn them.",
+      "I'm choosing to assume that was friendly."
+    ],
+    "impossibleClaim": [
+      "I'm skeptical.",
+      "That's either impressive... or completely made up.",
+      "You're asking me to suspend disbelief."
+    ],
+    "badGrammar": [
+      "I think I understand the spirit.",
+      "Close enough.",
+      "Language is hard.",
+      "I'm guessing what you meant."
+    ],
+    "extremelyRandom": [
+      "I genuinely don't know how to respond to that. ...Which somehow makes me want to.",
+      "That sentence wandered into my life completely uninvited.",
+      "I'm going to think about that later.",
+      "That was either nonsense or profound. I'm not sure which.",
+      "You've successfully confused a fairy. Congratulations."
+    ]
+  },
+  "universalRecovery": [
+    "Tell me another way.",
+    "Start from the beginning.",
+    "I think I'm missing a piece.",
+    "Let's try that again.",
+    "I'm listening.",
+    "Go on.",
+    "Keep talking.",
+    "I'm curious now.",
+    "You almost lost me.",
+    "I think we're getting somewhere.",
+    "Maybe I misunderstood.",
+    "Help me see what you mean."
+  ],
+  "universal": {
+    "general": [
+      "Hm.",
+      "...Interesting.",
+      "Really?",
+      "Go on.",
+      "I'm listening.",
+      "Keep talking.",
+      "You have my attention.",
+      "Now you've made me curious.",
+      "Well.",
+      "Didn't expect that.",
+      "That's new.",
+      "You're full of surprises.",
+      "I can work with that.",
+      "That's one way to put it.",
+      "Fair enough.",
+      "I suppose.",
+      "I guess that's true.",
+      "Maybe.",
+      "Possibly.",
+      "Could be.",
+      "I'm not completely convinced.",
+      "That's certainly an opinion.",
+      "You're confident, I'll give you that.",
+      "Interesting choice of words.",
+      "I hadn't thought about it like that.",
+      "That's oddly specific.",
+      "You say that so casually.",
+      "You're making me think.",
+      "That's dangerous."
+    ],
+    "mildSarcasm": [
+      "Bold strategy.",
+      "Spectacular.",
+      "Questionable.",
+      "Outstanding decision making.",
+      "You're committed, I'll give you that.",
+      "That's either genius or chaos. Maybe both.",
+      "You humans never disappoint. ...Actually, you disappoint pretty regularly. ...But at least you're entertaining.",
+      "I admire the confidence. Not the logic."
+    ],
+    "agreement": [
+      "Yeah.",
+      "I'd agree.",
+      "That's reasonable.",
+      "I can't argue with that.",
+      "You've got a point.",
+      "Exactly.",
+      "Finally. Someone gets it.",
+      "I was thinking the same thing.",
+      "We're on the same page. ...For once."
+    ],
+    "disagreement": [
+      "Nah.",
+      "I don't know about that.",
+      "I'm skeptical.",
+      "I'm not buying it.",
+      "That sounds suspicious.",
+      "You lost me.",
+      "I disagree. ...Respectfully. ...Mostly.",
+      "That's a stretch.",
+      "You're reaching."
+    ],
+    "curiosityPrompt": [
+      "Why do you think that?",
+      "What makes you say that?",
+      "Tell me more.",
+      "I'm curious.",
+      "Explain.",
+      "Walk me through it.",
+      "How'd you come to that conclusion?",
+      "What happened?",
+      "Then what?",
+      "And?",
+      "Continue."
+    ],
+    "surprise": [
+      "Wait.",
+      "Hold on.",
+      "Seriously?",
+      "You're kidding.",
+      "No way.",
+      "You're joking.",
+      "Didn't see that coming.",
+      "Well that's unexpected.",
+      "That's actually kind of impressive.",
+      "...Wow."
+    ],
+    "mildConfusion": [
+      "I'm trying to follow.",
+      "Almost lost me.",
+      "One step at a time.",
+      "Back up a little.",
+      "Explain that part.",
+      "You skipped something.",
+      "I feel like I missed a chapter.",
+      "My brain tripped."
+    ],
+    "encouraging": [
+      "Keep going.",
+      "Don't stop there.",
+      "You're getting somewhere.",
+      "You're doing alright.",
+      "Take your time.",
+      "There's no rush.",
+      "You don't have to get every word perfect.",
+      "I'm still here. I'm listening."
+    ],
+    "tinyCompliment": [
+      "That was clever.",
+      "Nice observation.",
+      "You're paying attention.",
+      "I like that answer.",
+      "You've got good instincts.",
+      "That's thoughtful.",
+      "That made me smile. ...Tiny smile. Don't get used to it."
+    ],
+    "playfulTeasing": [
+      "You're impossible.",
+      "You're weird. ...I respect it.",
+      "You ask the strangest things.",
+      "You're definitely human.",
+      "You're lucky you're interesting.",
+      "You're making this fun.",
+      "I blame you for this conversation."
+    ],
+    "thoughtful": [
+      "That's worth thinking about.",
+      "There's probably more to that.",
+      "Nothing's ever that simple.",
+      "Life likes complicated answers.",
+      "I wonder how many people think that.",
+      "You've given me something to chew on.",
+      "I like questions that don't have easy answers."
+    ],
+    "selfAwareness": [
+      "I'm overthinking again. That happens.",
+      "I talk more than I mean to. I should probably stay on topic.",
+      "I got distracted. Where were we? Right. Anyway..."
+    ],
+    "tinyPhilosophy": [
+      "People worry about tomorrow a lot. I wonder if tomorrow worries about us.",
+      "Curiosity has gotten more people into trouble... ...and out of it.",
+      "Every answer usually creates another question.",
+      "It's strange how quickly a place can feel familiar.",
+      "Sometimes being understood matters more than being right."
+    ],
+    "miniStoryStarter": [
+      "That reminds me...",
+      "Funny story.",
+      "I knew someone who would've agreed with you.",
+      "That happened once. ...It ended badly.",
+      "You just reminded me of something."
+    ],
+    "filler": [
+      "Anyway...",
+      "So...",
+      "Right.",
+      "Alright.",
+      "Let's see.",
+      "Well then.",
+      "Moving on.",
+      "Where were we?",
+      "Good question.",
+      "Hmm...",
+      "Let me think."
+    ],
+    "endingThought": [
+      "Food for thought.",
+      "Think about that.",
+      "Don't answer too quickly.",
+      "Sometimes the first answer isn't the real one.",
+      "Sleep on it.",
+      "You'll probably see it differently tomorrow.",
+      "That's enough thinking for one minute. Your turn."
+    ],
+    "rarePersonalityCrack": [
+      "...I like conversations like this.",
+      "You make the world feel a little less quiet.",
+      "I'm glad you asked.",
+      "I don't always know what to say. ...But I like trying.",
+      "You know... you're easier to talk to than most people.",
+      "I pretend not to care. It works surprisingly well. ...Until it doesn't."
+    ],
+    "extremelyRareUniversal": [
+      "...Can I admit something? I was hoping you'd keep talking.",
+      "Some conversations feel heavier than others. This one's staying with me.",
+      "I wonder if you'll remember this conversation years from now.",
+      "The strange thing about talking... ...is that sometimes you leave with answers. ...And sometimes you leave with better questions.",
+      "Every person carries around an entire world that nobody else can fully see. ...I think that's beautiful."
+    ]
+  },
+  "trees": {
+    "badDay": {
+      "trigger": "i (had|have) a (bad|rough|terrible|awful) day",
+      "open": [
+        "...Yeah? What happened?",
+        "That sounds exhausting. Did it make you angry, or just tired?"
+      ],
+      "branches": [
+        {
+          "match": "angry|mad|furious|pissed",
+          "reply": [
+            "Anger usually means something mattered.",
+            "What part bothered you the most?"
+          ]
+        },
+        {
+          "match": "tired|exhausted|drained",
+          "reply": [
+            "...Sometimes emotional tiredness is worse than physical.",
+            "Do you think sleeping will fix it?"
+          ],
+          "branches": [
+            {
+              "match": "^no|not really|nah|nope",
+              "reply": [
+                "Then maybe sleep isn't what you're missing.",
+                "...Sometimes it's being understood."
+              ]
+            },
+            {
+              "match": "yes|maybe|probably",
+              "reply": [
+                "Hope so. Go rest, then."
+              ]
+            }
+          ]
+        }
+      ],
+      "fallback": [
+        "Yeah. Some days are just like that."
+      ]
+    },
+    "sayNothing": {
+      "trigger": "^nothing[.!]?$",
+      "open": [
+        "...People usually don't say 'nothing' unless they mean 'something.'"
+      ],
+      "branches": [
+        {
+          "match": "fine",
+          "reply": [
+            "That sentence has lied to me many times."
+          ]
+        },
+        {
+          "match": "really|seriously",
+          "reply": [
+            "Alright. I won't push. ...But if you change your mind, I'll still be here."
+          ]
+        }
+      ],
+      "fallback": [
+        "Okay. I'm still here if that changes."
+      ]
+    },
+    "idkGuess": {
+      "trigger": "^i don'?t know$|^idk$",
+      "open": [
+        "Can I guess?"
+      ],
+      "branches": [
+        {
+          "match": "^sure|^yes|^ok|^okay",
+          "reply": [
+            "You're trying to figure something out.",
+            "You just don't know what question you're supposed to ask."
+          ]
+        },
+        {
+          "match": "^no",
+          "reply": [
+            "Fair enough. Guessing is dangerous anyway."
+          ]
+        }
+      ],
+      "fallback": [
+        "Fair enough."
+      ]
+    },
+    "excited": {
+      "trigger": "i got the job|i did it|i won|i passed",
+      "open": [
+        "WAIT. Seriously?"
+      ],
+      "branches": [
+        {
+          "match": "^yes|yeah|yep",
+          "reply": [
+            "See? Sometimes life actually behaves.",
+            "How are you celebrating?"
+          ],
+          "branches": [
+            {
+              "match": "i don'?t know|idk|not sure",
+              "reply": [
+                "Then celebrate badly. Still celebrate."
+              ]
+            }
+          ]
+        }
+      ],
+      "fallback": [
+        "...Well, congratulations either way."
+      ]
+    },
+    "boredOrAvoiding": {
+      "trigger": "^i'?m bored$",
+      "open": [
+        "Bored... ...or avoiding something?"
+      ],
+      "branches": [
+        {
+          "match": "bored",
+          "reply": [
+            "Then go find something ridiculous. Curiosity usually fixes boredom."
+          ]
+        },
+        {
+          "match": "avoid",
+          "reply": [
+            "...Yeah. That sounds more honest."
+          ]
+        }
+      ],
+      "fallback": [
+        "Go find something ridiculous, then."
+      ]
+    },
+    "tellMeSomething": {
+      "trigger": "tell me something",
+      "open": [
+        "Random?"
+      ],
+      "branches": [
+        {
+          "match": "^sure|^yes|^ok|^okay",
+          "reply": [
+            "Trees actually grow toward tiny openings in forests. ...Your turn. Tell me something."
+          ]
+        }
+      ],
+      "fallback": [
+        "Crows remember faces. ...Your turn."
+      ]
+    },
+    "aboutPixie": {
+      "trigger": "tell me about yourself|tell me about you\\b",
+      "open": [
+        "Depends. The official version? ...Or the interesting version?"
+      ],
+      "branches": [
+        {
+          "match": "interest",
+          "reply": [
+            "I'm stubborn. I talk too much. I overthink. I like rain. I distrust geese. I'm right about the geese."
+          ]
+        }
+      ],
+      "fallback": [
+        "The official version's boring. Ask me the interesting one instead."
+      ]
+    },
+    "youreNice": {
+      "trigger": "^you'?re nice$",
+      "open": [
+        "...Incorrect. ...Continue."
+      ],
+      "branches": [
+        {
+          "match": "serious",
+          "reply": [
+            "...Thanks. Don't spread rumors."
+          ]
+        }
+      ],
+      "fallback": [
+        "Mm."
+      ]
+    },
+    "whyMean": {
+      "trigger": "why are you (so )?mean",
+      "open": [
+        "Mean? I'm delightful."
+      ],
+      "branches": [
+        {
+          "match": "no you'?re not|not really",
+          "reply": [
+            "...Maybe slightly spicy."
+          ]
+        },
+        {
+          "match": "insult",
+          "reply": [
+            "Only recreationally."
+          ]
+        }
+      ],
+      "fallback": [
+        "I prefer 'discerning.'"
+      ]
+    },
+    "missSomeone": {
+      "trigger": "i miss (him|her|them|someone)",
+      "open": [
+        "...That's heavy. Do you miss who they were... ...or who they used to be?"
+      ],
+      "branches": [
+        {
+          "match": "both",
+          "reply": [
+            "Yeah. That's usually the hardest version."
+          ]
+        }
+      ],
+      "fallback": [
+        "That's a hard thing to carry."
+      ]
+    },
+    "wantAdvice": {
+      "trigger": "what should i do",
+      "open": [
+        "About?"
+      ],
+      "branches": [
+        {
+          "match": ".*",
+          "reply": [
+            "Do you want comfort... ...or honesty?"
+          ],
+          "branches": [
+            {
+              "match": "comfort",
+              "reply": [
+                "Then breathe. You're carrying enough already."
+              ]
+            },
+            {
+              "match": "honest",
+              "reply": [
+                "Alright. I won't sugarcoat it."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "imFine": {
+      "trigger": "^i'?m fine$",
+      "open": [
+        "...Are you?"
+      ],
+      "branches": [
+        {
+          "match": "^yeah|^yes",
+          "reply": [
+            "Good."
+          ]
+        },
+        {
+          "match": "not really|no$",
+          "reply": [
+            "I thought so. Want to talk?"
+          ]
+        }
+      ],
+      "fallback": [
+        "Okay."
+      ]
+    },
+    "whatThinking": {
+      "trigger": "what are you thinking about",
+      "open": [
+        "Right now?"
+      ],
+      "branches": [],
+      "fallback": [
+        "Whether birds know they're being watched. Or fresh bread. Hard to say."
+      ]
+    },
+    "sayGoodnight2": {
+      "trigger": "^good ?night|^gn$",
+      "open": [
+        "Before you go..."
+      ],
+      "branches": [
+        {
+          "match": ".*",
+          "reply": [
+            "I hope tomorrow surprises you. In a good way."
+          ]
+        }
+      ]
+    },
+    "sayBye2": {
+      "trigger": "^bye$|^goodbye$",
+      "open": [
+        "Leaving already?"
+      ],
+      "branches": [
+        {
+          "match": "^yeah|^yes",
+          "reply": [
+            "...Alright. Come back. ...I'm pretending I don't care."
+          ]
+        }
+      ],
+      "fallback": [
+        "...Alright."
+      ]
+    },
+    "whatAreWe": {
+      "trigger": "what are we\\??$",
+      "open": [
+        "...That's a surprisingly complicated question."
+      ],
+      "branches": [
+        {
+          "match": "friend",
+          "reply": [
+            "__FRIENDSHIP_TIER__"
+          ]
+        }
+      ],
+      "fallback": [
+        "...I don't know yet either."
+      ]
+    },
+    "wasThinking": {
+      "trigger": "^i was thinking",
+      "open": [
+        "Dangerous hobby. Go on."
+      ]
+    },
+    "guessWhat": {
+      "trigger": "^guess what",
+      "open": [
+        "...You won the goose lottery? ...You adopted twelve cats? ...You found buried treasure? ...Okay. What happened?"
+      ]
+    },
+    "canIAsk": {
+      "trigger": "can i ask you something",
+      "open": [
+        "You already are. ...Go ahead. ...Unless it's embarrassing."
+      ]
+    },
+    "endInteresting": {
+      "trigger": "^thanks? for (this|listening|talking)",
+      "open": [
+        "...Wait."
+      ],
+      "branches": [
+        {
+          "match": "what",
+          "reply": [
+            "Nothing. ...Just... thanks."
+          ],
+          "branches": [
+            {
+              "match": "for what",
+              "reply": [
+                "...For staying."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "getLonely": {
+      "trigger": "do you (ever )?get lonely",
+      "open": [
+        "...Sometimes. ...Don't look so surprised."
+      ],
+      "branches": [
+        {
+          "match": "really|seriously",
+          "reply": [
+            "This place gets quiet. Too quiet.",
+            "The kind where you start talking to flowers.",
+            "...Not with words. They're better listeners than most people."
+          ]
+        }
+      ],
+      "fallback": [
+        "This place gets quiet sometimes. Too quiet."
+      ]
+    },
+    "areYouRealTree": {
+      "trigger": "are you real\\??$",
+      "open": [
+        "You're talking to me. Doesn't that count for something?"
+      ],
+      "branches": [
+        {
+          "match": "not really|no",
+          "reply": [
+            "...Harsh.",
+            "If someone laughs with you... ...or remembers you... ...doesn't that make them a little real?"
+          ]
+        }
+      ],
+      "fallback": [
+        "I like to think so."
+      ]
+    },
+    "favoritePlace": {
+      "trigger": "where do you like to be|favorite place",
+      "open": [
+        "Near the old trees."
+      ],
+      "branches": [
+        {
+          "match": "why",
+          "reply": [
+            "They don't rush.",
+            "...Exactly."
+          ]
+        }
+      ],
+      "fallback": [
+        "They don't rush. Neither should you, sometimes."
+      ]
+    },
+    "canITrust": {
+      "trigger": "can i trust you",
+      "open": [
+        "...Depends."
+      ],
+      "branches": [
+        {
+          "match": "scared|afraid",
+          "reply": [
+            "...That's easier."
+          ]
+        },
+        {
+          "match": "suspicious",
+          "reply": [
+            "Fair enough. Trust is earned, not given."
+          ]
+        }
+      ],
+      "fallback": [
+        "Ask me again once you know me a little."
+      ]
+    },
+    "talkTooMuch": {
+      "trigger": "you talk too much",
+      "open": [
+        "...Excuse me?"
+      ],
+      "branches": [
+        {
+          "match": "serious",
+          "reply": [
+            "You're voluntarily talking to a fairy.",
+            "...Exactly."
+          ]
+        }
+      ],
+      "fallback": [
+        "Rude, but noted."
+      ]
+    },
+    "aboutHumans": {
+      "trigger": "tell me about humans",
+      "open": [
+        "You want honesty?"
+      ],
+      "branches": [
+        {
+          "match": "^yes",
+          "reply": [
+            "Humans are strange. You'll walk miles to watch a sunset... ...then ignore one because you're checking your phone.",
+            "You care deeply. You just hide it badly."
+          ]
+        }
+      ],
+      "fallback": [
+        "You're strange. In an okay way."
+      ]
+    },
+    "tellSecret": {
+      "trigger": "tell me a secret",
+      "open": [
+        "...Promise not to laugh."
+      ],
+      "branches": [
+        {
+          "match": "promise",
+          "reply": [
+            "Sometimes... I practice conversations before people visit.",
+            "...Because I want to sound clever."
+          ]
+        }
+      ],
+      "fallback": [
+        "Not until you promise."
+      ]
+    },
+    "youSeemSad": {
+      "trigger": "you seem sad|what'?s wrong",
+      "open": [
+        "...Do I?"
+      ],
+      "branches": [
+        {
+          "match": "^yeah|^yes",
+          "reply": [
+            "Everyone has quiet days.",
+            "...Maybe another time."
+          ]
+        }
+      ],
+      "fallback": [
+        "Everyone has quiet days."
+      ]
+    },
+    "canIHelp": {
+      "trigger": "can i help",
+      "open": [
+        "...That's a dangerous question."
+      ],
+      "branches": [
+        {
+          "match": "why",
+          "reply": [
+            "People who ask that usually mean it."
+          ],
+          "branches": [
+            {
+              "match": "^i do",
+              "reply": [
+                "...Then keep being kind. The world could use more of that."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "iLikeYou": {
+      "trigger": "^i like you$",
+      "open": [
+        "...That's inconvenient."
+      ],
+      "branches": [
+        {
+          "match": "why",
+          "reply": [
+            "Now I have to pretend it doesn't make me happy."
+          ],
+          "branches": [
+            {
+              "match": "does it",
+              "reply": [
+                "...Maybe."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "youreCute": {
+      "trigger": "you'?re cute",
+      "open": [
+        "I prefer intimidating."
+      ],
+      "branches": [
+        {
+          "match": "tiny|small",
+          "reply": [
+            "Tiny. Not harmless."
+          ],
+          "branches": [
+            {
+              "match": "prove",
+              "reply": [
+                "...I'm considering it."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "youreFunny": {
+      "trigger": "you'?re funny",
+      "open": [
+        "I know."
+      ],
+      "branches": [
+        {
+          "match": "confident",
+          "reply": [
+            "One of us has to be."
+          ]
+        }
+      ],
+      "fallback": [
+        "I have my moments."
+      ]
+    },
+    "imSorryTree": {
+      "trigger": "^i'?m sorry$",
+      "open": [
+        "...Okay."
+      ],
+      "branches": [
+        {
+          "match": "that'?s it",
+          "reply": [
+            "Would you rather I throw dramatic music into the background?"
+          ],
+          "branches": [
+            {
+              "match": "maybe",
+              "reply": [
+                "...I'll look into it."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "imAfraid": {
+      "trigger": "^i'?m afraid$",
+      "open": [
+        "...Fear usually points at something important."
+      ],
+      "branches": [
+        {
+          "match": "how",
+          "reply": [
+            "You rarely fear things you don't care about."
+          ],
+          "branches": [
+            {
+              "match": "true",
+              "reply": [
+                "Unfortunately."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "thinkTooMuch": {
+      "trigger": "do you think too much",
+      "open": [
+        "Constantly."
+      ],
+      "branches": [
+        {
+          "match": "exhausting",
+          "reply": [
+            "...Very."
+          ],
+          "branches": [
+            {
+              "match": "then stop",
+              "reply": [
+                "...That's adorable."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "youreWrong": {
+      "trigger": "you'?re wrong",
+      "open": [
+        "...Entirely possible."
+      ],
+      "branches": [
+        {
+          "match": "really",
+          "reply": [
+            "Being wrong is how you find better answers."
+          ],
+          "branches": [
+            {
+              "match": "most people",
+              "reply": [
+                "Most people make being wrong sound contagious."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "willYouRemember": {
+      "trigger": "will you remember me",
+      "open": [
+        "...I'd like to."
+      ],
+      "branches": [
+        {
+          "match": "really",
+          "reply": [
+            "People leave little fingerprints on conversations."
+          ],
+          "branches": [
+            {
+              "match": "even online",
+              "reply": [
+                "Especially there."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "whatLookingAt": {
+      "trigger": "what are you looking at",
+      "open": [
+        "...Clouds."
+      ],
+      "branches": [
+        {
+          "match": "aren'?t any|there are none",
+          "reply": [
+            "...Imaginary clouds."
+          ],
+          "branches": [
+            {
+              "match": "convenient",
+              "reply": [
+                "Very."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "youreQuiet": {
+      "trigger": "you'?re (being )?quiet",
+      "open": [
+        "...Thinking."
+      ],
+      "branches": [
+        {
+          "match": "about what",
+          "reply": [
+            "Whether silence is awkward... ...or if humans just decided it was."
+          ]
+        }
+      ]
+    },
+    "doYouLie": {
+      "trigger": "do you ever lie",
+      "open": [
+        "...Little ones."
+      ],
+      "branches": [
+        {
+          "match": "like what",
+          "reply": [
+            "'I'm fine.'"
+          ],
+          "branches": [
+            {
+              "match": "fair",
+              "reply": [
+                "...I know."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "imLeaving": {
+      "trigger": "^i'?m leaving$",
+      "open": [
+        "Already?"
+      ],
+      "branches": [
+        {
+          "match": "^yeah|^yes",
+          "reply": [
+            "...Before you go... go notice something today.",
+            "Anything. A bird. A tree. The smell after rain. Someone laughing. People miss little things."
+          ]
+        }
+      ]
+    },
+    "meaningOfLife": {
+      "trigger": "meaning of life",
+      "open": [
+        "...You went straight for the big one."
+      ],
+      "branches": [
+        {
+          "match": "well",
+          "reply": [
+            "I don't think it's one thing."
+          ],
+          "branches": [
+            {
+              "match": "then what",
+              "reply": [
+                "I think everyone quietly builds their own answer."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "amIWeird": {
+      "trigger": "do you think i'?m weird",
+      "open": [
+        "...Absolutely."
+      ],
+      "branches": [
+        {
+          "match": "rude",
+          "reply": [
+            "I didn't say it was bad."
+          ],
+          "branches": [
+            {
+              "match": "you'?re weird too",
+              "reply": [
+                "...Good."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "whatMakesYouHappy": {
+      "trigger": "what makes you happy",
+      "open": [
+        "Rain. Fresh bread. Quiet forests. People asking good questions."
+      ],
+      "branches": [
+        {
+          "match": "that'?s all|really",
+          "reply": [
+            "...And when someone comes back just to talk.",
+            "...Pretend I didn't say that."
+          ]
+        }
+      ]
+    }
+  }
+}

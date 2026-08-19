@@ -1,0 +1,9 @@
+{
+  "name": "nosirt",
+  "private": true,
+  "version": "1.24.0",
+  "description": "Server-side dependencies for Netlify Functions (nosirt site). This package.json existed nowhere before v01.24 — added specifically because account-auth.js and account-update.js require firebase-admin, which Netlify needs a manifest to know to install.",
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
