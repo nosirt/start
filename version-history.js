@@ -7,6 +7,33 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.28',
+    date: '8/2025',
+    changes: [
+      'Admin login fix — admin-login action now runs before username validation in account-auth.js',
+      'Pixie AI: removed thinkingConfig (Gemini cold start dropped from 6-8s to under 1s)',
+      'Pixie AI: all fallback providers (Groq, Mistral, Cerebras etc.) now receive full system prompt',
+      'Pixie AI: per-provider timeouts (Gemini 3s, others 2s) prevent 504 gateway timeouts',
+      'Pixie AI: richer lore system — Aelindra backstory, In-Between cartographer history, mushroom incident',
+      'Pixie AI: (open)/(close) admin dev mode toggle in DM thread',
+      'Pixie AI: separate localStorage/sessionStorage histories for normal vs admin mode',
+      'Pixie AI: name capture now routes through AI (isNamingCheck) for smart validation',
+      'Pixie drag: touch fallback handlers with stopPropagation to fix Hammer.js interference on iOS',
+      'Pixie drag: pointercancel handler prevents stuck drag state on iOS',
+      'Pixie visibility: S.view check replaces broken DOM check for map detection',
+      'Pixie visibility: wander restarts after returning to map from another page',
+      'Music: Web Audio GainNode route for iOS volume control (audioEl.volume ignored by iOS)',
+      'Music: fade-in ramps to user saved volume instead of 1.0',
+      'Music: music-modal backdrop tap now closes modal',
+      'Wireless: all live detection code removed (probeLiveStatus, markEpisodeLive, sweepLiveStatus etc.)',
+      'Wireless: showCoverStyle URL typos fixed (both youtube and custom paths)',
+      'Wireless: showIsOwnedByMe now includes nosirt owner check',
+      'Admin: claimAllShowsAsNosirt() batch migration function added',
+      'Admin: shows ownership tab added to admin panel',
+      'Version bumped to 01.28'
+    ]
+  },
+  {
     version: '01.27',
     date: new Date().toLocaleDateString(),
     changes: [

@@ -819,7 +819,7 @@ function ytThumbUrl(videoId, thumbTs){
 
 function showCoverStyle(show,eps){
   if(show.coverType==='custom'&&show.coverUrl){
-    return {style:'background-image:url("' + show.coverUrl.replace(/"/g,'') + '"};background-size:cover;background-position:center;'};
+    return {style:'background-image:url("' + show.coverUrl.replace(/"/g,'') + '");background-size:cover;background-position:center;'};
   }
   if(show.coverType==='youtube'||!show.coverType){
     const first=eps&&eps[0];
@@ -972,6 +972,7 @@ function showIsVisibleToUser(s){
 function showIsOwnedByMe(s){
   if(S.adminUnlocked && !s.owner) return true; // legacy admin shows
   if(S.adminUnlocked && s.owner === 'admin') return true;
+  if(S.adminUnlocked && s.owner === 'nosirt') return true; // claimed shows
   if(S.account && s.owner === S.account.username) return true;
   return false;
 }

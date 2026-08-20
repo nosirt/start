@@ -313,13 +313,18 @@ function openPixieDmThread(){
 function updatePixieIconVisibility(){
   const icon=$('pixie-icon');
   if(!icon)return;
-  // S.view is set to 'map' by showMap(), page name by showPage()
-  // The old DOM check ($('page-map') / map-viewport.style.display) was
-  // always returning true because map-viewport has no inline display:none.
+  const wasHidden = icon.style.display==='none';
   const isMap = (typeof S!=='undefined') && (S.view==='map' || S.view==null);
   icon.style.display = isMap ? '' : 'none';
   icon.style.pointerEvents = isMap ? 'auto' : 'none';
-  if(!isMap){ pixieDragging=false; pixieMoved=false; }
+  if(!isMap){
+    pixieDragging=false; pixieMoved=false;
+    clearTimeout(pixieWanderTimer);
+  } else if(wasHidden){
+    // Returning to map — restart wander with a short delay
+    clearTimeout(pixieWanderTimer);
+    scheduleNextPixieWander(1500+Math.random()*2000);
+  }
 }
 
 // compat shim — any old call to openPixiePanel() (e.g. from action
@@ -1385,6 +1390,7 @@ function initPixie(){
     icon.style.transition='none';
     try{ icon.setPointerCapture && icon.setPointerCapture(e.pointerId); }catch(err){}
     e.preventDefault();
+    e.stopPropagation();
   },{passive:false});
   // Touch fallback for iOS where pointer events may not fire on fixed elements over canvas
   icon.addEventListener('touchstart',(e)=>{
@@ -1395,6 +1401,7 @@ function initPixie(){
     startX=e.touches[0].clientX-rect.left;startY=e.touches[0].clientY-rect.top;
     icon.style.transition='none';
     e.preventDefault();
+    e.stopPropagation(); // prevent Hammer.js on map-viewport from consuming this
   },{passive:false});
   icon.addEventListener('touchmove',(e)=>{
     if(!pixieDragging||e.touches.length!==1)return;
@@ -1412,6 +1419,7 @@ function initPixie(){
     setTimeout(()=>{ pixieMoved=false; },50);
     scheduleNextPixieWander(2000+Math.random()*3000);
     e.preventDefault();
+    e.stopPropagation();
   },{passive:false});
   document.addEventListener('pointermove',(e)=>{
     if(!pixieDragging)return;
