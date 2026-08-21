@@ -111,9 +111,7 @@ function loadDefaultEpisode(){
   if(ep)loadEpisode(ep);
 }
 
-// v01.09: if a stream is live when the site first loads, start it
-// playing in the background automatically. Browsers often block audio
-}
+
 
 async function tryRadioUnlock(){
   const val=$('wp-gate-pw').value.trim();
@@ -263,14 +261,7 @@ async function importPlaylist(){
   }
 }
 
-// ═══ v01.08: LIVE STREAM DETECTION ═══
-// A YouTube live broadcast reliably reports getDuration()===0 while it's
-// airing (a finished/normal video always has a real duration). We use a
-// small hidden, muted, throwaway player to check this without disturbing
-// whatever the user is actually listening to.
 
-
-}
 
 // v01.11: the top-bar "podcast" badge — ALWAYS Midnight Archive,
 // regardless of what's currently playing or which show admin has set
@@ -290,11 +281,7 @@ function handleLiveBadgeClick(){
   if(typeof setActiveShow==='function')setActiveShow(show.id,{autoplay:false});
 }
 
-// Safety-net + periodic re-check for whichever episode is currently
-// flagged live — confirms it's still airing, or clears the flag once the
-// stream has ended. A max-age safety net guarantees it can never get
-// stuck showing LIVE forever even if a check silently fails.
-}
+
 
 // v01.11: startPodcastFromMusicBar() / openDefaultShowFromMusicBar()
 // were removed here — both only existed to force "always Midnight

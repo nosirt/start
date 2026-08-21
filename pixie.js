@@ -574,7 +574,7 @@ async function sendPixieMessage(){
       pixieAiHistory = [];
       // Load dev mode history (sessionStorage)
       if(typeof rerenderPixieDmThread === 'function') rerenderPixieDmThread();
-      addPixieMessage('pixie', '[ dev mode on — I'm just an AI now. ask me anything. ]');
+      addPixieMessage('pixie', '[ dev mode on — ask me anything ]');
       return;
     }
     if(cmd === '(close)'){
