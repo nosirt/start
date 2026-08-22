@@ -756,10 +756,9 @@ function showWirelessHome(){
 }
 
 function updateWirelessToolbar(){
-  const adminBtn=$('btn-new-show-admin');
-  const userBtn=$('btn-new-show-user');
-  if(adminBtn) adminBtn.style.display = S.adminUnlocked ? 'inline-flex' : 'none';
-  if(userBtn)  userBtn.style.display  = (!S.adminUnlocked && S.account) ? 'inline-flex' : 'none';
+  // Single "my stuff" button replaces the old scattered add/create buttons
+  const stuffBtn = $('btn-your-stuff');
+  if(stuffBtn) stuffBtn.style.display = (S.adminUnlocked || S.account) ? 'inline-flex' : 'none';
 }
 
 function setActiveShow(showId,opts){
@@ -931,6 +930,22 @@ function shareShowToChat(showId){
 }
 
 // Toggle a user-owned show between public and private
+// showConfirmModal wrapper — uses native confirm if the modal helper isn't available
+function _wpConfirm(title, msg){
+  if(typeof showConfirmModal === 'function') return showConfirmModal(title, msg);
+  return Promise.resolve(confirm(title + '\n\n' + msg));
+}
+async function showConfirmModal(title, msg){
+  return new Promise(resolve=>{
+    // Check if a custom modal system exists
+    if(typeof openConfirmModal === 'function'){
+      openConfirmModal(title, msg, resolve);
+    } else {
+      resolve(confirm(title + '\n\n' + msg));
+    }
+  });
+}
+
 async function toggleShowPublic(showId){
   if(!S.account){ toast('sign in to change visibility'); return; }
   const show=(S.shows||[]).find(s=>s.id===showId);
@@ -974,47 +989,100 @@ function renderShowGrid(){
     return !q||s.title.toLowerCase().includes(q)||(s.description||'').toLowerCase().includes(q);
   });
 
-  // Split: public shows (for the Netflix grid) vs my private shows
-  const myUsername = S.account ? S.account.username : null;
-  const publicShows = allVisible.filter(s=>s.isPublic || S.adminUnlocked);
-  const myPrivate  = allVisible.filter(s=>!s.isPublic && showIsOwnedByMe(s));
+  // Main grid: public shows only (private shows live in "your stuff" tab)
+  const publicShows = allVisible.filter(s => s.isPublic || S.adminUnlocked);
 
-  function makeCard(s, isPrivate){
+  function makeCard(s){
     const eps=(S.showEpisodesAll||[]).filter(e=>e.showId===s.id).sort((a,b)=>(a.order||0)-(b.order||0));
     const cover=showCoverStyle(s,eps);
     const shortDesc=(s.description||'').slice(0,80);
-    const privBadge = isPrivate
-      ? '<div style="font-size:.58rem;color:var(--amber);opacity:.7;margin-top:2px">🔒 private</div>'
-      : (s.owner && s.owner!=='admin' ? '<div style="font-size:.58rem;color:var(--fog);opacity:.5;margin-top:2px">by '+esc(s.owner)+'</div>' : '');
+    const ownerTag = (s.owner && s.owner!=='admin' && s.owner!=='nosirt')
+      ? '<div style="font-size:.58rem;color:var(--fog);opacity:.5;margin-top:2px">by '+esc(s.owner)+'</div>' : '';
     return '<div class="wp-show-card" onclick="openShow(\''+s.id+'\')">'+
       '<div class="wp-show-cover" style="'+cover.style+'">'+(cover.label||'')+'</div>'+
       '<div class="wp-show-card-title">'+esc(s.title)+'</div>'+
       '<div class="wp-show-card-desc">'+esc(shortDesc)+((s.description||'').length>80?'…':'')+'</div>'+
       '<div class="wp-show-card-count">'+eps.length+' video'+(eps.length===1?'':'s')+'</div>'+
-      privBadge+
+      ownerTag+
       '</div>';
   }
 
-  // My private section (only shown when logged in and has private shows)
-  const myPrivateHtml = myPrivate.length
-    ? '<div style="margin-bottom:6px;font-size:.68rem;color:var(--fog);opacity:.6;font-family:\"IM Fell English\",serif;font-style:italic">— your private library —</div>'+
-      '<div class="wp-show-grid" style="margin-bottom:20px">'+myPrivate.map(s=>makeCard(s,true)).join('')+'</div>'
-    : '';
-
-  if(!publicShows.length && !myPrivate.length){
+  if(!publicShows.length){
     grid.innerHTML='';
-    if(myPrivateHtml) grid.innerHTML = myPrivateHtml;
     empty.style.display='block';
-    empty.textContent=q?'no shows match that search.':'no shows yet.';
+    empty.textContent=q?'no shows match that search.':'no public shows yet.';
     return;
   }
   empty.style.display='none';
+  grid.innerHTML = publicShows.map(s=>makeCard(s)).join('');
+}
 
-  const publicHtml = publicShows.length
-    ? publicShows.map(s=>makeCard(s,false)).join('')
-    : (myPrivate.length ? '' : '<div style="padding:20px;text-align:center;font-size:.78rem;color:var(--fog);opacity:.5;font-family:\"IM Fell English\",serif;font-style:italic">no public shows yet.</div>');
-
-  grid.innerHTML = myPrivateHtml + publicHtml;
+// ── "Your Stuff" panel — user's own shows with privacy toggle ──
+function openYourStuff(){
+  const panel=$('wp-your-stuff-panel');
+  if(panel){ panel.style.display=panel.style.display==='none'?'block':'none'; renderYourStuff(); return; }
+  // Create panel
+  const p=document.createElement('div');
+  p.id='wp-your-stuff-panel';
+  p.style.cssText='position:fixed;inset:0;z-index:160;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)';
+  p.innerHTML='<div style="width:100%;max-width:480px;max-height:75vh;background:rgba(10,8,6,.97);border-top:1px solid rgba(200,137,42,.3);border-radius:16px 16px 0 0;overflow-y:auto;padding:16px 16px 32px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+    +'<span style="font-family:Cinzel Decorative,serif;font-size:.85rem;color:var(--amber)">your playlists</span>'
+    +'<button onclick="closeYourStuff()" style="background:none;border:none;color:var(--fog);font-size:1.1rem;cursor:pointer;padding:4px 8px">✕</button>'
+    +'</div>'
+    +'<div id="wp-your-stuff-list"></div>'
+    +'<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(200,137,42,.12)">'
+    +(S.adminUnlocked?'<button class="wp-add-toggle show-admin" onclick="openShowForm(null);closeYourStuff()" style="display:block;width:100%;margin:0;text-align:center">+ new show</button>':'')
+    +((S.account&&!S.adminUnlocked)?'<button class="wp-add-toggle" onclick="openUserShowForm();closeYourStuff()" style="display:block;width:100%;margin:0;text-align:center">+ new playlist</button>':'')
+    +'</div>'
+    +'</div>';
+  p.addEventListener('click',e=>{ if(e.target===p)closeYourStuff(); });
+  document.body.appendChild(p);
+  renderYourStuff();
+}
+function closeYourStuff(){
+  const p=$('wp-your-stuff-panel');
+  if(p)p.remove();
+}
+function renderYourStuff(){
+  const list=$('wp-your-stuff-list');
+  if(!list)return;
+  const mine=(S.shows||[]).filter(s=>showIsOwnedByMe(s) && (s.title||'').trim().toLowerCase()!=='pixie')
+    .sort((a,b)=>(a.title||'').localeCompare(b.title||''));
+  if(!mine.length){
+    list.innerHTML='<div style="font-family:IM Fell English,serif;font-style:italic;font-size:.78rem;color:var(--fog);opacity:.5;padding:8px 0">no playlists yet.</div>';
+    return;
+  }
+  list.innerHTML=mine.map(s=>{
+    const eps=(S.showEpisodesAll||[]).filter(e=>e.showId===s.id).length;
+    const isPublic=!!s.isPublic;
+    const dotCol=isPublic?'#8fc97a':'rgba(200,137,42,.8)';
+    const dotShadow=isPublic?'rgba(143,201,122,.5)':'rgba(200,137,42,.3)';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid rgba(200,137,42,.1)">'
+      +'<div onclick="openShow(\''+s.id+'\');closeYourStuff()" style="flex:1;min-width:0;cursor:pointer">'
+      +'<div style="font-family:Crimson Text,serif;font-size:.88rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(s.title)+'</div>'
+      +'<div style="font-size:.65rem;color:var(--fog);opacity:.5;margin-top:2px">'+eps+' video'+(eps!==1?'s':'')+'</div>'
+      +'</div>'
+      +'<button onclick="confirmToggleShowPublic(\''+s.id+'\','+isPublic+')" title="'+(isPublic?'make private':'make public')+'" '
+      +'style="background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--fog)">'
+      +'<span style="width:10px;height:10px;border-radius:50%;background:'+dotCol+';box-shadow:0 0 6px '+dotShadow+';display:inline-block;flex-shrink:0"></span>'
+      +(isPublic?'public':'private')
+      +'</button>'
+      +'</div>';
+  }).join('');
+}
+async function confirmToggleShowPublic(showId, currentlyPublic){
+  if(!currentlyPublic){
+    // Making public — show confirmation
+    const ok=await showConfirmModal(
+      'Make this playlist public?',
+      'Anyone on the site will be able to see it and its videos in the main grid.'
+    );
+    if(!ok)return;
+  }
+  await toggleShowPublic(showId);
+  renderYourStuff();
+  renderShowGrid();
 }
 
 // ── show banner + description editing ──

@@ -278,9 +278,8 @@
     <div id="wp-home">
       <div class="wp-toolbar">
         <input class="sq-input" id="wp-home-search" placeholder="search shows..." oninput="renderShowGrid()" style="flex:1">
-        <!-- v01.26: admin sees "new show", logged-in users see "my playlist +" -->
-        <button class="wp-add-toggle show-admin" onclick="openShowForm(null)" style="display:none" id="btn-new-show-admin">+ new show</button>
-        <button class="wp-add-toggle" id="btn-new-show-user" style="display:none" onclick="openUserShowForm()">+ new playlist</button>
+        <!-- your stuff button — shows for logged-in users -->
+        <button class="wp-add-toggle" id="btn-your-stuff" style="display:none" onclick="openYourStuff()">my stuff ↑</button>
       </div>
       <!-- v01.27: book-a-slot moved inline into Midnight Archive show page -->
       <div id="wp-show-grid" class="wp-show-grid"></div>

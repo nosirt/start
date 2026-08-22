@@ -146,15 +146,16 @@ async function sendPixieDmMessage(){
   if(typeof S !== 'undefined' && S.adminUnlocked){
     const cmd = text.toLowerCase().trim();
     if(cmd === '(open)'){
-      if(typeof pixieDevMode !== 'undefined') window.pixieDevMode = true;
-      if(typeof pixieAiHistory !== 'undefined') window.pixieAiHistory = [];
+      // Direct assignment to the let binding in pixie.js (not window property)
+      pixieDevMode = true;
+      pixieAiHistory = [];
       rerenderPixieDmThread();
-      if(typeof addPixieMessage==='function') addPixieMessage('pixie', '[ dev mode on — ask me anything ]');
+      if(typeof addPixieMessage==='function') addPixieMessage('pixie', '[ dev mode — ask me anything, no restrictions ]');
       return;
     }
     if(cmd === '(close)'){
-      if(typeof pixieDevMode !== 'undefined') window.pixieDevMode = false;
-      if(typeof pixieAiHistory !== 'undefined') window.pixieAiHistory = [];
+      pixieDevMode = false;
+      pixieAiHistory = [];
       rerenderPixieDmThread();
       if(typeof addPixieMessage==='function') addPixieMessage('pixie', '[ back in character. sigh. ]');
       return;
@@ -186,8 +187,8 @@ async function sendPixieDmMessage(){
     // wasAwaitingName — send through AI with isNamingCheck:true for smart validation
     S.pixieAwaiting = null;
     try{
-      const isDevMode = typeof pixieDevMode!=='undefined' ? pixieDevMode : false;
-      const aiHist = typeof pixieAiHistory!=='undefined' ? pixieAiHistory : [];
+      const isDevMode = (typeof pixieDevMode !== 'undefined') ? pixieDevMode : false;
+      const aiHist = (typeof pixieAiHistory !== 'undefined') ? pixieAiHistory : [];
       const ctx = typeof buildPixieSiteContext==='function' ? buildPixieSiteContext() : {};
       const res = await fetch('/.netlify/functions/pixie-chat',{
         method:'POST', headers:{'Content-Type':'application/json'},

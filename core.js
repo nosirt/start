@@ -392,8 +392,8 @@ const GIPHY_API_KEY = 'PASTE_YOUR_GIPHY_API_KEY_HERE';
 let activeMusic=null;
 const MUSIC={
   ancient:{src:null,builtIn:true,name:'🏰 Ancient ambience · built in'},
-  lofi:{src:'https://stream.zeno.fm/0r0xa792kwzuv',name:'📻 Lofi Hip Hop · live'},
-  dark:{src:'https://stream.zeno.fm/f3wvbbqmdg8uv',name:'🌑 Dark Ambient · live'},
+  lofi:{src:'https://ice1.somafm.com/groovesalad-128-mp3',name:'📻 Groove Salad · lofi/ambient'},
+  dark:{src:'https://ice1.somafm.com/dronezone-128-mp3',name:'🌑 Drone Zone · dark ambient'},
   podcast:{podcast:true,name:'🎙 The Wireless · podcast'},
 };
 let synthMusic=null;
