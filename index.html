@@ -6,6 +6,14 @@
 <title>nosirt</title>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<!-- PWA -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#090709">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="nosirt">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 </head>
 <body>
 
@@ -508,6 +516,7 @@
 
 <!-- v01.05: PROFILE PANEL (embedded in icon, appears on click) -->
 <div id="profile-panel" style="display:none;position:fixed;width:260px;max-height:70vh;background:rgba(10,8,6,.98);border:1px solid rgba(200,137,42,.3);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.7);z-index:98;flex-direction:column;overflow:hidden;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));animation:slideUp .3s ease">
+  <button class="pwa-install-btn" id="pwa-install-profile-btn" onclick="openPwaModal()" style="margin:10px 10px 0;width:calc(100% - 20px);box-sizing:border-box">📲 add to home screen</button>
   <div style="padding:16px;border-bottom:1px solid rgba(200,137,42,.2);display:flex;justify-content:space-between;align-items:center">
     <div style="font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--amber)">nosirt</div>
     <button onclick="closeProfilePanel()" style="background:none;border:none;color:var(--fog);font-size:1.2rem;cursor:pointer">✕</button>
@@ -1082,5 +1091,76 @@
 <script src="playlist.js"></script>
 <script src="sharing.js"></script>
 
+  <!-- PWA install instructions modal -->
+  <div id="pwa-instructions-modal" onclick="if(event.target===this)closePwaModal()">
+    <div class="pwa-modal-inner">
+      <div class="pwa-modal-title">add nosirt to your home screen</div>
+      <div id="pwa-ios-steps">
+        <div class="pwa-step"><span class="pwa-step-num">1.</span> tap the <strong>Share</strong> button at the bottom of Safari (the box with the arrow pointing up)</div>
+        <div class="pwa-step"><span class="pwa-step-num">2.</span> scroll down and tap <strong>"Add to Home Screen"</strong></div>
+        <div class="pwa-step"><span class="pwa-step-num">3.</span> tap <strong>Add</strong> — nosirt will appear on your home screen like an app</div>
+      </div>
+      <div id="pwa-android-steps" style="display:none">
+        <div class="pwa-step"><span class="pwa-step-num">1.</span> tap the <strong>⋮ menu</strong> in the top-right corner of Chrome</div>
+        <div class="pwa-step"><span class="pwa-step-num">2.</span> tap <strong>"Add to Home screen"</strong></div>
+        <div class="pwa-step"><span class="pwa-step-num">3.</span> tap <strong>Add</strong> — nosirt opens as a standalone app</div>
+      </div>
+      <div id="pwa-native-prompt" style="display:none">
+        <div class="pwa-step">your browser supports one-tap install:</div>
+        <button onclick="triggerPwaInstall()" style="margin-top:12px;width:100%;background:rgba(200,137,42,.15);border:1px solid rgba(200,137,42,.4);border-radius:10px;color:var(--amber);font-family:Cinzel Decorative,serif;font-size:.78rem;padding:10px;cursor:pointer">install nosirt →</button>
+      </div>
+      <button onclick="closePwaModal()" style="margin-top:16px;width:100%;background:none;border:1px solid rgba(200,137,42,.2);border-radius:8px;color:var(--fog);font-family:IM Fell English,serif;font-size:.78rem;padding:8px;cursor:pointer">close</button>
+    </div>
+  </div>
+
+  <script>
+    // PWA service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(() => console.log('nosirt PWA ready'))
+          .catch(e => console.warn('SW failed:', e));
+      });
+    }
+
+    // PWA install prompt
+    let _pwaInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      _pwaInstallPrompt = e;
+      // Show the install button if it exists
+      document.querySelectorAll('.pwa-install-btn').forEach(b => b.classList.add('visible'));
+    });
+
+    function openPwaModal() {
+      const modal = document.getElementById('pwa-instructions-modal');
+      if (!modal) return;
+      // Detect platform
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isAndroid = /android/i.test(navigator.userAgent);
+      const iosEl = document.getElementById('pwa-ios-steps');
+      const andEl = document.getElementById('pwa-android-steps');
+      const natEl = document.getElementById('pwa-native-prompt');
+      if (iosEl) iosEl.style.display = isIOS ? 'block' : 'none';
+      if (andEl) andEl.style.display = isAndroid && !_pwaInstallPrompt ? 'block' : 'none';
+      if (natEl) natEl.style.display = _pwaInstallPrompt ? 'block' : 'none';
+      if (!isIOS && !isAndroid && !_pwaInstallPrompt && iosEl) iosEl.style.display = 'block';
+      modal.classList.add('open');
+    }
+    function closePwaModal() {
+      const modal = document.getElementById('pwa-instructions-modal');
+      if (modal) modal.classList.remove('open');
+    }
+    async function triggerPwaInstall() {
+      if (!_pwaInstallPrompt) { openPwaModal(); return; }
+      _pwaInstallPrompt.prompt();
+      const { outcome } = await _pwaInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        _pwaInstallPrompt = null;
+        document.querySelectorAll('.pwa-install-btn').forEach(b => b.classList.remove('visible'));
+        closePwaModal();
+      }
+    }
+  </script>
 </body>
 </html>

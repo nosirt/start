@@ -1382,3 +1382,84 @@ function deleteComment(id){
   if(!S.adminUnlocked)return;
   fbDeleteComment(id);
 }
+
+// ═══════════════════════════════════════════════════════
+// renderEpisodes — draws the episode list for the current show
+// Called any time S.episodes changes or currentEpisode changes.
+// Features: play highlight, per-episode progress bar, reorder (admin),
+// edit/delete (admin), add-to-playlist & share (logged-in users).
+// ═══════════════════════════════════════════════════════
+function renderEpisodes(){
+  const list=$('wp-episode-list');
+  if(!list)return;
+  const eps=S.episodes||[];
+
+  if(!eps.length){
+    list.innerHTML='<div class="wp-ep-empty">no videos in this show yet.'+(S.adminUnlocked||showIsOwnedByMe((S.shows||[]).find(s=>s.id===S.currentShowId)||{})?' add one above.':'')+'</div>';
+    return;
+  }
+
+  const isOwner=S.adminUnlocked||showIsOwnedByMe((S.shows||[]).find(s=>s.id===S.currentShowId)||{});
+  const isUser=!!(S.account||S.adminUnlocked);
+
+  list.innerHTML=eps.map((ep,idx)=>{
+    const isPlaying=currentEpisode&&currentEpisode.id===ep.id;
+    const prog=S.podcastProgress&&S.podcastProgress[ep.id];
+    const pct=(prog&&prog.duration&&prog.seconds)?Math.min(100,Math.round(prog.seconds/prog.duration*100)):0;
+
+    // Progress bar — always rendered, shown only when there's saved progress
+    const progressBar=pct>0
+      ?`<div class="wp-ep-progress"><div class="wp-ep-progress-fill" style="width:${pct}%"></div></div>`
+      :'<div class="wp-ep-progress" style="opacity:0"><div class="wp-ep-progress-fill" style="width:0%"></div></div>';
+
+    // Description (truncated)
+    const descHtml=ep.desc
+      ?`<div class="wp-ep-desc">${esc(ep.desc.slice(0,120))}${ep.desc.length>120?'…':''}</div>`
+      :'';
+
+    // Select checkbox (admin select mode)
+    const selectBox=S.selectMode&&S.adminUnlocked
+      ?`<input type="checkbox" class="wp-ep-check" ${S.selectedEpisodeIds&&S.selectedEpisodeIds.has(ep.id)?'checked':''} onclick="toggleEpisodeSelected(event,'${ep.id}')">`
+      :'';
+
+    // Reorder buttons (owner only)
+    const reorderBtns=isOwner
+      ?`<div class="wp-ep-reorder">
+          <button class="wp-ep-reorder-btn" onclick="moveEpisode(event,'${ep.id}',-1)" title="move up" ${idx===0?'disabled':''}>▲</button>
+          <button class="wp-ep-reorder-btn" onclick="moveEpisode(event,'${ep.id}',1)" title="move down" ${idx===eps.length-1?'disabled':''}>▼</button>
+        </div>`
+      :'';
+
+    // Action buttons (owner: edit+delete, user: +playlist + share)
+    const ownerBtns=isOwner
+      ?`<button class="playlist-add-btn" onclick="editEpisode(event,'${ep.id}')" title="edit" style="margin-left:6px;font-size:.65rem">✎</button>
+        <button class="playlist-add-btn" onclick="deleteEpisode(event,'${ep.id}')" title="delete" style="margin-left:4px;font-size:.65rem;color:rgba(200,80,80,.8)">🗑</button>`
+      :'';
+
+    const userBtns=isUser&&!isOwner
+      ?`<button class="playlist-add-btn" onclick="event.stopPropagation();addToPlaylist({type:'episode',showTitle:${JSON.stringify(getCurrentShowTitle())},episodeTitle:${JSON.stringify(ep.title)}})" title="save to playlist" style="margin-left:6px">+</button>
+        <button class="playlist-add-btn" onclick="event.stopPropagation();shareEpisodeToChat(${JSON.stringify(ep)})" title="share to chat" style="margin-left:4px;font-size:.65rem">📎</button>`
+      : (isOwner&&isUser
+        ?`<button class="playlist-add-btn" onclick="event.stopPropagation();shareEpisodeToChat(${JSON.stringify(ep)})" title="share to chat" style="margin-left:4px;font-size:.65rem">📎</button>`
+        :'');
+
+    return `<div class="wp-ep-item${isPlaying?' playing':''}" onclick="loadEpisode(${JSON.stringify(ep)})">
+      ${selectBox}
+      <div class="wp-ep-play-icon">${isPlaying?'🔊':'▶'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="wp-ep-title">${esc(ep.title)}</div>
+        ${descHtml}
+        ${progressBar}
+      </div>
+      ${reorderBtns}
+      <div class="wp-ep-actions" onclick="event.stopPropagation()" style="display:flex;align-items:center;flex-shrink:0">
+        ${ownerBtns}${userBtns}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getCurrentShowTitle(){
+  const show=(S.shows||[]).find(s=>s.id===S.currentShowId);
+  return show?show.title:'';
+}

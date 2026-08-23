@@ -1516,3 +1516,56 @@ html.view-desktop .wcal-panel{max-width:560px !important;padding:28px 26px 32px 
 html.view-desktop .wcal-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr)) !important;}
 html.view-desktop .music-opt{padding:14px 18px !important;}
 html.view-desktop .music-opt-name{font-size:.95rem !important;}
+
+/* ── v01.28: Pixie thinking animation ── */
+.pixie-thinking-dots{display:inline-flex;align-items:center;gap:4px;height:18px}
+.pixie-thinking-dots span{
+  width:7px;height:7px;border-radius:50%;
+  background:rgba(200,137,42,.65);
+  display:inline-block;
+  animation:pixie-bounce 1.1s ease-in-out infinite;
+}
+.pixie-thinking-dots span:nth-child(2){animation-delay:.18s}
+.pixie-thinking-dots span:nth-child(3){animation-delay:.36s}
+@keyframes pixie-bounce{
+  0%,80%,100%{transform:translateY(0);opacity:.4}
+  40%{transform:translateY(-6px);opacity:1}
+}
+
+/* ── v01.28: episode description line ── */
+.wp-ep-desc{font-family:'IM Fell English',serif;font-style:italic;font-size:.72rem;color:var(--fog);opacity:.65;margin-top:2px;line-height:1.4}
+
+/* ── v01.28: episode reorder buttons ── */
+.wp-ep-reorder{display:flex;flex-direction:column;gap:2px;flex-shrink:0;opacity:0;transition:opacity .15s}
+.wp-ep-item:hover .wp-ep-reorder{opacity:1}
+.wp-ep-reorder-btn{background:none;border:1px solid rgba(200,137,42,.2);border-radius:4px;color:var(--amber);font-size:.6rem;cursor:pointer;padding:2px 5px;line-height:1}
+.wp-ep-reorder-btn:hover{background:rgba(200,137,42,.12)}
+.wp-ep-reorder-btn:disabled{opacity:.25;cursor:default}
+
+/* ── v01.28: PWA install button ── */
+.pwa-install-btn{
+  display:none;
+  align-items:center;gap:6px;
+  font-family:'IM Fell English',serif;font-size:.72rem;font-style:italic;
+  color:var(--amber);opacity:.7;
+  background:none;border:1px solid rgba(200,137,42,.25);
+  border-radius:8px;padding:5px 10px;cursor:pointer;
+  transition:opacity .15s,border-color .15s;
+}
+.pwa-install-btn:hover{opacity:1;border-color:rgba(200,137,42,.5)}
+.pwa-install-btn.visible{display:flex}
+#pwa-instructions-modal{
+  position:fixed;inset:0;z-index:170;display:none;
+  align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
+}
+#pwa-instructions-modal.open{display:flex}
+.pwa-modal-inner{
+  width:100%;max-width:420px;
+  background:rgba(10,8,6,.97);border-top:1px solid rgba(200,137,42,.3);
+  border-radius:16px 16px 0 0;padding:20px 20px 36px;
+}
+.pwa-modal-title{font-family:'Cinzel Decorative',serif;font-size:.85rem;color:var(--amber);margin-bottom:12px}
+.pwa-step{font-family:'Crimson Text',serif;font-size:.88rem;color:var(--cream);padding:7px 0;border-bottom:1px solid rgba(200,137,42,.1);line-height:1.5}
+.pwa-step:last-child{border-bottom:none}
+.pwa-step-num{color:var(--amber);font-weight:600;margin-right:6px}

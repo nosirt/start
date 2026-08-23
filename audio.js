@@ -77,11 +77,23 @@ function tryPlay(src, name) {
   };
   a.play().then(() => {
     _ensureAudioGainRoute(a);
-    _doFirstVisitFadeIn(a);
-    // Don't call applyMusicVolumeLive() here — _doFirstVisitFadeIn
-    // handles the ramp. After the first fade-in is done, subsequent
-    // calls to applyMusicVolumeLive() work normally.
-    toast('sound started');
+    if (!_audioFadeInDone) {
+      // First ever play — ramp up from silence
+      _doFirstVisitFadeIn(a);
+    } else {
+      // Switching tracks — cancel any pending ramp and set gain immediately
+      // so the new track is audible instantly (first-press fix)
+      if (_audioGainNode && _audioCtxForGain) {
+        _audioGainNode.gain.cancelScheduledValues(_audioCtxForGain.currentTime);
+        _audioGainNode.gain.setValueAtTime(
+          Math.max(0.0001, Math.min(1.6, musicVolumeMultiplier())),
+          _audioCtxForGain.currentTime
+        );
+      } else {
+        a.volume = Math.max(0, Math.min(1, musicVolumeMultiplier()));
+      }
+    }
+    toast('now playing: ' + name);
     updateNP(name);
   }).catch(() => {
     updateNP('tap anywhere to start sound');

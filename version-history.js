@@ -7,6 +7,22 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.29',
+    date: '8/2025',
+    changes: [
+      'Wireless: renderEpisodes() written — episodes now display with play highlight, per-episode progress bar, reorder (▲▼) buttons, edit/delete for owners, +playlist and share for users',
+      'Wireless: add episode form wired — YouTube URL parsing, single video + playlist import, all functional',
+      'Music: first-press track switch fixed — GainNode gain is now set immediately on track change instead of being stuck in the previous fade-in ramp',
+      'Music streams: switched to SomaFM (Groove Salad for lofi, Drone Zone for dark ambient) — Zeno.fm streams were returning 403',
+      'Pixie: thinking animation added — three bouncing amber dots appear while AI is fetching a response',
+      'Pixie dev mode (open)/(close): fixed variable scoping bug — pixieDevMode assignment now correctly updates the let binding, not a stale window property',
+      'PWA: nosirt can now be installed as a home-screen app on iOS and Android',
+      'PWA: manifest.webmanifest and sw.js added to root, apple-touch-icon and meta tags in <head>',
+      'PWA: install button added to profile panel — shows platform-specific instructions (iOS Share sheet, Android Chrome menu, or one-tap prompt if browser supports beforeinstallprompt)',
+      'Version bumped to 01.29'
+    ]
+  },
+  {
     version: '01.28',
     date: '8/2025',
     changes: [

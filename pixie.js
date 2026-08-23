@@ -1234,6 +1234,25 @@ function pixiePlayEpisodeByQuery(showQuery, episodeQuery) {
   return ep;
 }
 
+// Thinking animation — three bouncing dots while AI processes
+function _showPixieThinking(){
+  _hidePixieThinking();
+  const container = $('pixie-dm-messages');
+  if(!container)return;
+  const dot = document.createElement('div');
+  dot.id = 'pixie-thinking-dot';
+  dot.className = 'chat-msg';
+  dot.style.cssText = 'opacity:.7;padding:8px 10px';
+  dot.innerHTML = '<span class="pixie-thinking-dots"><span></span><span></span><span></span></span>';
+  container.appendChild(dot);
+  const wrap = container.parentElement;
+  if(wrap) wrap.scrollTop = wrap.scrollHeight;
+}
+function _hidePixieThinking(){
+  const dot = $('pixie-thinking-dot');
+  if(dot) dot.remove();
+}
+
 async function sendPixieAiMessage(userText) {
   // v01.27: tone memory checks before sending
   if(looksLikeApology(userText)){
@@ -1266,6 +1285,9 @@ async function sendPixieAiMessage(userText) {
 
   const thinkDelay = 400 + Math.random() * 500;
 
+  // Show the thinking animation while waiting for AI response
+  _showPixieThinking();
+
   try {
     const res = await fetch('/.netlify/functions/pixie-chat', {
       method: 'POST',
@@ -1281,6 +1303,7 @@ async function sendPixieAiMessage(userText) {
 
     const data = await res.json();
 
+    _hidePixieThinking();
     if (data.reply) {
       let replyText = data.reply;
 
@@ -1309,6 +1332,7 @@ async function sendPixieAiMessage(userText) {
         }, thinkDelay);
       }
     } else {
+      _hidePixieThinking();
       setTimeout(() => addPixieMessage('pixie', getPixieResponse(userText)), thinkDelay);
     }
 
