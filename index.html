@@ -354,6 +354,9 @@
               <svg class="wp-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 2.6 5.9"/><path d="M4 7.5V12h4.5"/></svg>
               <span class="wp-btn-sub">10</span>
             </button>
+            <button class="wp-btn" id="wp-shuffle-btn" onclick="toggleShuffle()" aria-label="shuffle" title="shuffle: off" style="opacity:0.4" aria-pressed="false">
+              <svg class="wp-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+            </button>
             <button class="wp-btn" id="wp-prev" onclick="prevEpisode()" aria-label="previous video">
               <svg class="wp-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 6a1 1 0 0 1 2 0v12a1 1 0 0 1-2 0V6zm3.5 5.13 8.4-5.93A1 1 0 0 1 20.5 6v12a1 1 0 0 1-1.6.8l-8.4-5.93a1 1 0 0 1 0-1.74z"/></svg>
             </button>
@@ -392,7 +395,7 @@
 
       <div class="wp-toolbar">
         <input class="sq-input" id="wp-search" placeholder="search videos..." oninput="renderEpisodes()" style="flex:1">
-        <button class="wp-add-toggle" onclick="toggleAddEpisode()">+ add</button>
+        <button class="wp-add-toggle" id="wp-add-ep-btn" onclick="toggleAddEpisode()" style="display:none">+ add</button>
       </div>
 
       <div id="wp-add-panel" class="wp-add-panel" style="display:none">
@@ -430,7 +433,7 @@
       <div class="wp-episode-list" id="wp-episode-list"></div>
 
       <!-- comments -->
-      <div class="wp-comments" id="wp-comments-section" style="display:none">
+      <div class="wp-comments" id="wp-comments-section" style="display:none"><!-- shown by setActiveShow and loadEpisode -->
         <div class="wp-comments-title">comments</div>
         <div class="wp-comment-form">
           <input class="sq-input" id="wp-comment-name" placeholder="your name...">
@@ -1112,6 +1115,8 @@
       <button onclick="closePwaModal()" style="margin-top:16px;width:100%;background:none;border:1px solid rgba(200,137,42,.2);border-radius:8px;color:var(--fog);font-family:IM Fell English,serif;font-size:.78rem;padding:8px;cursor:pointer">close</button>
     </div>
   </div>
+
+  <script src="background-audio.js"></script>
 
   <script>
     // PWA service worker

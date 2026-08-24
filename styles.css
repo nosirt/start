@@ -1569,3 +1569,7 @@ html.view-desktop .music-opt-name{font-size:.95rem !important;}
 .pwa-step{font-family:'Crimson Text',serif;font-size:.88rem;color:var(--cream);padding:7px 0;border-bottom:1px solid rgba(200,137,42,.1);line-height:1.5}
 .pwa-step:last-child{border-bottom:none}
 .pwa-step-num{color:var(--amber);font-weight:600;margin-right:6px}
+
+/* ── v01.29: shuffle button ── */
+#wp-shuffle-btn { color: var(--amber); }
+#wp-shuffle-btn[aria-pressed="true"] { color: #8fc97a; }

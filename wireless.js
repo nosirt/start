@@ -113,6 +113,24 @@ function loadDefaultEpisode(){
 
 
 
+async function toggleAddEpisode(){
+  const panel=$('wp-add-panel');
+  if(!panel)return;
+  const showing=panel.style.display!=='none';
+  if(showing){ panel.style.display='none'; return; }
+  // Logged-in users who own this show skip the password gate
+  if(S.account||S.adminUnlocked){
+    $('wp-gate').style.display='none';
+    $('wp-add-form').style.display='flex';
+    radioUnlocked=true;
+  } else {
+    // Anonymous visitor — show password gate
+    $('wp-gate').style.display='flex';
+    $('wp-add-form').style.display='none';
+  }
+  panel.style.display='block';
+}
+
 async function tryRadioUnlock(){
   const val=$('wp-gate-pw').value.trim();
   const ok=await validatePassword('podcast_password',val);
@@ -148,6 +166,31 @@ function parsePlaylistId(url){
 function nextEpisodeOrder(){
   const eps=(S.showEpisodesAll||[]).filter(e=>e.showId===S.currentShowId);
   return eps.length?Math.max(...eps.map(e=>e.order||0))+1:0;
+}
+
+// ── Shuffle ──
+let wpShuffleOn=false;
+function toggleShuffle(){
+  wpShuffleOn=!wpShuffleOn;
+  const btn=$('wp-shuffle-btn');
+  if(btn){btn.style.opacity=wpShuffleOn?'1':'0.4';btn.setAttribute('aria-pressed',wpShuffleOn);}
+  toast(wpShuffleOn?'shuffle on 🔀':'shuffle off');
+}
+function nextEpisode(){
+  const eps=S.episodes||[];if(!eps.length)return;
+  if(wpShuffleOn){
+    const others=eps.filter(e=>!currentEpisode||e.id!==currentEpisode.id);
+    const pool=others.length?others:eps;
+    loadEpisode(pool[Math.floor(Math.random()*pool.length)]);
+  }else{
+    const idx=currentEpisode?eps.findIndex(e=>e.id===currentEpisode.id):-1;
+    loadEpisode(eps[(idx+1)%eps.length]||eps[0]);
+  }
+}
+function prevEpisode(){
+  const eps=S.episodes||[];if(!eps.length)return;
+  const idx=currentEpisode?eps.findIndex(e=>e.id===currentEpisode.id):-1;
+  loadEpisode(eps[(idx-1+eps.length)%eps.length]||eps[eps.length-1]);
 }
 
 function deleteEpisode(e,id){
@@ -300,6 +343,26 @@ function handleLiveBadgeClick(){
     bindHoldButton($('wp-fwd'),1);
     const pp=$('wp-playpause');if(pp)pp.addEventListener('click',togglePlayPause);
     const cp=$('wp-center-play');if(cp)cp.addEventListener('click',togglePlayPause);
+
+    // Save per-episode progress every 5s so progress bars stay accurate
+    setInterval(()=>{
+      if(!currentEpisode||!ytPlayer||typeof ytPlayer.getCurrentTime!=='function')return;
+      let secs=0,dur=0;
+      try{secs=ytPlayer.getCurrentTime();dur=ytPlayer.getDuration();}catch(e){return;}
+      if(!dur||secs<2)return;
+      if(!S.podcastProgress)S.podcastProgress={};
+      S.podcastProgress[currentEpisode.id]={seconds:Math.floor(secs),duration:Math.floor(dur)};
+      try{localStorage.setItem('n_podcast_progress',JSON.stringify(S.podcastProgress));}catch(e){}
+      // Update seekbar
+      const fill=$('wp-seek-fill'),handle=$('wp-seek-handle');
+      const pct=dur>0?(secs/dur*100):0;
+      if(fill)fill.style.width=pct+'%';
+      if(handle)handle.style.left=pct+'%';
+      const fmt=s=>{const m=Math.floor(s/60);return m+':'+(String(Math.floor(s%60)).padStart(2,'0'));};
+      const cur=$('wp-time-cur'),durEl=$('wp-time-dur');
+      if(cur)cur.textContent=fmt(secs);
+      if(durEl)durEl.textContent=fmt(dur);
+    },5000);
     const stage=$('wp-stage');
     if(stage){
       ['pointerdown','pointermove'].forEach(ev=>stage.addEventListener(ev,showWpControls));
@@ -773,6 +836,18 @@ function setActiveShow(showId,opts){
   renderShowBanner();
   renderEpisodes();
   updateBulkDeleteUI();
+  // Show comments for the show (episode-level comments appear when an episode is clicked)
+  S.currentCommentEpisodeId=null;
+  const commSec=$('wp-comments-section');
+  if(commSec)commSec.style.display='block';
+  if(typeof renderComments==='function')renderComments();
+  // Hide the add panel until explicitly opened
+  const addPanel=$('wp-add-panel');
+  if(addPanel)addPanel.style.display='none';
+  radioUnlocked=false;
+  // Only show + add button for show owners
+  const addBtn=$('wp-add-ep-btn');
+  if(addBtn)addBtn.style.display=isCurrentShowMine()?'inline-flex':'none';
   if(opts.autoplay)loadDefaultEpisode();
 }
 function openShow(showId){ setActiveShow(showId,{autoplay:false}); }
@@ -1124,7 +1199,7 @@ function renderShowBanner(){
 }
 
 function startShowDescriptionEdit(){
-  if(!S.adminUnlocked)return;
+  if(!S.adminUnlocked && !isCurrentShowMine())return;
   const show=(S.shows||[]).find(s=>s.id===S.currentShowId);if(!show)return;
   $('wp-show-desc-text').style.display='none';
   $('wp-show-desc-edit-btn').style.display='none';

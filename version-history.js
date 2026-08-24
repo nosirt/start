@@ -7,6 +7,26 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.30',
+    date: '8/2025',
+    changes: [
+      'Wireless: toggleAddEpisode() added — + add button now opens/closes add panel correctly',
+      'Wireless: logged-in users bypass the podcast password gate on their own shows',
+      'Wireless: + add button hidden for non-owners, shown dynamically when viewing own show',
+      'Wireless: shuffle button added — 🔀 icon in player, picks random episode on auto-advance',
+      'Wireless: nextEpisode wraps around (last → first), prevEpisode wraps around (first → last)',
+      'Wireless: per-episode progress saved every 5s during playback (localStorage)',
+      'Wireless: comments section now opens automatically when entering a show',
+      'Wireless: loadEpisode opens comments for that specific episode',
+      'Wireless: show owners (not just admin) can edit show description',
+      'Wireless: show description edit button visible to owners, not just admin',
+      'Music: openMusicModal now highlights the currently playing track',
+      'Background audio: background-audio.js added with 3-layer iOS keepalive (AudioContext ping, silent WAV loop, SW periodic sync)',
+      'Background audio: sw.js updated with periodicsync handler',
+      'Version bumped to 01.30'
+    ]
+  },
+  {
     version: '01.29',
     date: '8/2025',
     changes: [

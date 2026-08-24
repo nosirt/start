@@ -224,5 +224,11 @@ function toggleMusic(key) {
 }
 
 function selectMusic(mode, el) { toggleMusic(mode); }
-function openMusicModal() { $('music-modal').classList.add('open'); }
+function openMusicModal() {
+  $('music-modal').classList.add('open');
+  // Mark currently playing track
+  document.querySelectorAll('.music-opt').forEach(o=>{
+    o.classList.toggle('playing', o.getAttribute('data-key')===activeMusic);
+  });
+}
 function closeMusicModal() { $('music-modal').classList.remove('open'); }
