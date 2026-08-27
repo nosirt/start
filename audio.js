@@ -192,6 +192,7 @@ function toggleMusic(key) {
       activeMusic = null;
       updateNP('nothing playing · tap to start');
       document.querySelectorAll('.music-opt').forEach(o => o.classList.remove('playing'));
+      if (typeof updateMiniPlayerUI === 'function') updateMiniPlayerUI();
       closeMusicModal(); return;
     }
     stopAmbientMusic();
@@ -199,10 +200,28 @@ function toggleMusic(key) {
     document.querySelectorAll('.music-opt').forEach(o => o.classList.remove('playing'));
     const el = document.querySelector('.music-opt[data-key="podcast"]');
     if (el) el.classList.add('playing');
+    // v01.31: this used to do nothing but change a label if no episode
+    // had ever been loaded this session — tapping "The Wireless" looked
+    // like it worked (icon highlighted) but nothing actually played.
     if (typeof currentEpisode !== 'undefined' && currentEpisode && ytPlayer) {
+      // already loaded this session (maybe paused/ambient took over) — resume it
       ytPlayer.playVideo(); updateNP('🎙 ' + currentEpisode.title);
-    } else { updateNP('🎙 The Wireless'); }
-    closeMusicModal(); return;
+      closeMusicModal();
+    } else if (typeof pickDefaultEpisode === 'function' && pickDefaultEpisode()) {
+      // nothing loaded yet this session, but there's a last-played/oldest
+      // episode to resume — load & start it right here, in the background,
+      // no page redirect (matches the original "background playback" intent)
+      updateNP('🎙 The Wireless');
+      closeMusicModal();
+      loadDefaultEpisode();
+    } else {
+      // truly nothing to play (no shows/episodes at all yet) — send them
+      // to the wireless page to pick something
+      closeMusicModal();
+      if (typeof navigateTo === 'function') navigateTo('wireless');
+    }
+    if (typeof updateMiniPlayerUI === 'function') updateMiniPlayerUI();
+    return;
   }
   if (ytPlayer) ytPlayer.pauseVideo();
   const a = $('audio-player');
@@ -220,6 +239,9 @@ function toggleMusic(key) {
     const el = document.querySelector(`.music-opt[data-key="${key}"]`);
     if (el) el.classList.add('playing');
   }
+  // podcast is paused (not stopped) so switching back later resumes in place —
+  // keep the mini-player visible but dim it to show it's not the active source
+  if (typeof updateMiniPlayerUI === 'function') updateMiniPlayerUI();
   closeMusicModal();
 }
 

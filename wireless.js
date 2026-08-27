@@ -21,6 +21,15 @@ let wpDraggingSeek=false;
 let wpHideTimer=null;
 let waveRunning=false;
 
+// v01.31: ytPlayer/currentEpisode are top-level `let` bindings, which do NOT
+// become window properties the way `var`/function declarations do. Other
+// scripts (background-audio.js) need window.ytPlayer to check play state
+// for iOS keepalive/resume, so we mirror both onto window whenever they change.
+function _wpSyncGlobals(){
+  window.ytPlayer=ytPlayer;
+  window.currentEpisode=currentEpisode;
+}
+
 function onYouTubeIframeAPIReady(){
   ytApiReady=true;
   if(pendingVideoId)createPlayer(pendingVideoId);
@@ -36,12 +45,15 @@ function createPlayer(videoId){
     playerVars:{controls:0,modestbranding:1,rel:0,playsinline:1,cc_load_policy:1,iv_load_policy:3,fs:0},
     events:{
       onReady:()=>{
+        _wpSyncGlobals();
         ytPlayer.playVideo();
         const cp=$('wp-center-play');if(cp)cp.style.display='none';
       },
-      onStateChange:onPlayerStateChange
+      onStateChange:onPlayerStateChange,
+      onError:onPlayerError
     }
   });
+  _wpSyncGlobals();
 }
 
 function onPlayerStateChange(e){
@@ -61,8 +73,270 @@ function onPlayerStateChange(e){
     pendingSeekSeconds=null;
   }
   if(e.data===0)nextEpisode();
+  updateMiniPlayerUI();
 }
 
+// v01.31: a video that's private/deleted/embed-restricted fires onError
+// instead of ever reaching onStateChange. Without this the player just
+// sits there silently "stuck" — skip to the next episode automatically,
+// same as if the current one had finished, and let the listener know why.
+function onPlayerError(e){
+  console.warn('wireless: video error',e&&e.data,'for episode',currentEpisode&&currentEpisode.id);
+  toast('that video can\'t be played (private/removed) — skipping');
+  nextEpisode();
+}
+
+
+/* ============================================================
+   PLAYER CONTROLS — play/pause, seek bar, hold-to-skip, wave
+   visualizer, wave/video mode toggle, theater/fullscreen.
+   (v01.31: previously called from initWireless() below but never
+   implemented — the whole interactive control layer was missing.)
+   ============================================================ */
+
+function togglePlayPause(){
+  if(!ytPlayer||typeof ytPlayer.getPlayerState!=='function'){
+    // nothing loaded yet — fall back to starting the default episode
+    if(!currentEpisode)loadDefaultEpisode();
+    return;
+  }
+  const state=ytPlayer.getPlayerState();
+  if(state===1)ytPlayer.pauseVideo();
+  else ytPlayer.playVideo();
+}
+
+function showWpControls(){
+  const stage=$('wp-stage');
+  if(!stage||!stage.classList.contains('mode-video'))return;
+  const controls=$('wp-controls');
+  if(controls)controls.classList.add('show');
+  if(wpHideTimer)clearTimeout(wpHideTimer);
+  wpHideTimer=setTimeout(()=>{
+    if(controls)controls.classList.remove('show');
+  },3000);
+}
+
+// ── Wave visualizer (decorative — YouTube's iframe audio isn't
+// analyzable cross-origin, so this is a lightweight animated bar
+// pattern rather than a true frequency analysis) ──
+let _waveCtx=null,_waveRAF=null,_waveT=0;
+function setupWaveCanvas(){
+  const canvas=$('wp-wave');
+  if(!canvas)return;
+  const tile=$('wp-art-tile');
+  const size=tile?tile.getBoundingClientRect():{width:76,height:76};
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=Math.max(1,Math.round((size.width||76)*dpr));
+  canvas.height=Math.max(1,Math.round((size.height||76)*dpr));
+  _waveCtx=canvas.getContext('2d');
+  if(_waveCtx)_waveCtx.scale(dpr,dpr);
+  drawWave(0);
+}
+function drawWave(t){
+  const canvas=$('wp-wave');
+  if(!canvas||!_waveCtx)return;
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.width/dpr,h=canvas.height/dpr;
+  _waveCtx.clearRect(0,0,w,h);
+  const bars=5;
+  const gap=w/(bars*2);
+  for(let i=0;i<bars;i++){
+    const phase=t/420+i*1.3;
+    const amp=waveRunning?(0.25+Math.abs(Math.sin(phase))*0.65):0.14;
+    const barH=Math.max(3,h*amp);
+    const x=gap+(i*2*gap);
+    _waveCtx.fillStyle='rgba(220,174,88,'+(waveRunning?0.85:0.3)+')';
+    _waveCtx.fillRect(x-1.5,(h-barH)/2,3,barH);
+  }
+}
+function _waveLoop(ts){
+  _waveT=ts;
+  drawWave(ts);
+  if(waveRunning)_waveRAF=requestAnimationFrame(_waveLoop);
+}
+function startWave(){
+  if(waveRunning)return;
+  waveRunning=true;
+  if(!_waveCtx)setupWaveCanvas();
+  _waveRAF=requestAnimationFrame(_waveLoop);
+}
+function stopWave(){
+  waveRunning=false;
+  if(_waveRAF)cancelAnimationFrame(_waveRAF);
+  drawWave(_waveT);
+}
+
+// ── Seek bar: click-to-jump + drag ──
+function bindSeekBar(){
+  const bar=$('wp-seekbar');
+  if(!bar)return;
+  const seekFromEvent=(clientX,commit)=>{
+    if(!ytPlayer||typeof ytPlayer.getDuration!=='function')return;
+    const rect=bar.getBoundingClientRect();
+    const pct=Math.min(1,Math.max(0,(clientX-rect.left)/rect.width));
+    const dur=ytPlayer.getDuration()||0;
+    const fill=$('wp-seek-fill'),handle=$('wp-seek-handle');
+    if(fill)fill.style.width=(pct*100)+'%';
+    if(handle)handle.style.left=(pct*100)+'%';
+    const cur=$('wp-time-cur');
+    if(cur){const s=Math.floor(pct*dur);cur.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+    if(commit&&dur)ytPlayer.seekTo(pct*dur,true);
+  };
+  const start=e=>{
+    wpDraggingSeek=true;
+    const x=e.touches?e.touches[0].clientX:e.clientX;
+    seekFromEvent(x,false);
+    e.preventDefault&&e.preventDefault();
+  };
+  const move=e=>{
+    if(!wpDraggingSeek)return;
+    const x=e.touches?e.touches[0].clientX:e.clientX;
+    seekFromEvent(x,false);
+  };
+  const end=e=>{
+    if(!wpDraggingSeek)return;
+    wpDraggingSeek=false;
+    const x=(e.changedTouches?e.changedTouches[0].clientX:e.clientX);
+    if(typeof x==='number')seekFromEvent(x,true);
+  };
+  bar.addEventListener('pointerdown',start);
+  window.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',end);
+  bar.addEventListener('touchstart',start,{passive:false});
+  window.addEventListener('touchmove',move,{passive:false});
+  window.addEventListener('touchend',end);
+  // plain click (no drag) also jumps
+  bar.addEventListener('click',e=>{
+    if(wpDraggingSeek)return;
+    seekFromEvent(e.clientX,true);
+  });
+}
+
+// Keeps the seek bar + time readouts in sync every animation frame
+// while the video is actually playing (the 5s progress-save interval
+// in initWireless persists to localStorage but is too coarse for a
+// smooth-looking bar).
+let _seekLoopLastPaint=0;
+function seekBarUpdateLoop(ts){
+  requestAnimationFrame(seekBarUpdateLoop);
+  if(wpDraggingSeek)return;
+  if(!ytPlayer||typeof ytPlayer.getCurrentTime!=='function')return;
+  if(ts-_seekLoopLastPaint<200)return; // throttle to ~5x/sec
+  _seekLoopLastPaint=ts;
+  let secs=0,dur=0;
+  try{secs=ytPlayer.getCurrentTime();dur=ytPlayer.getDuration();}catch(e){return;}
+  if(!dur)return;
+  const pct=Math.min(100,(secs/dur)*100);
+  const fill=$('wp-seek-fill'),handle=$('wp-seek-handle');
+  if(fill)fill.style.width=pct+'%';
+  if(handle)handle.style.left=pct+'%';
+  const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+  const cur=$('wp-time-cur'),durEl=$('wp-time-dur');
+  if(cur)cur.textContent=fmt(secs);
+  if(durEl)durEl.textContent=fmt(dur);
+}
+
+// ── Hold-to-fast-skip on the ±10s buttons: a tap does one 10s jump,
+// a hold repeats every 350ms until released ──
+function bindHoldButton(btn,dir){
+  if(!btn)return;
+  let holdTimer=null,heldOnce=false;
+  const skip=()=>{
+    if(!ytPlayer||typeof ytPlayer.getCurrentTime!=='function')return;
+    let cur=0,dur=0;
+    try{cur=ytPlayer.getCurrentTime();dur=ytPlayer.getDuration();}catch(e){return;}
+    const next=Math.min(Math.max(0,cur+dir*10),dur||cur+dir*10);
+    ytPlayer.seekTo(next,true);
+  };
+  const start=e=>{
+    heldOnce=false;
+    skip();
+    holdTimer=setInterval(()=>{heldOnce=true;skip();},350);
+    e.preventDefault&&e.preventDefault();
+  };
+  const stop=()=>{
+    if(holdTimer){clearInterval(holdTimer);holdTimer=null;}
+  };
+  btn.addEventListener('pointerdown',start);
+  btn.addEventListener('pointerup',stop);
+  btn.addEventListener('pointerleave',stop);
+  btn.addEventListener('touchstart',start,{passive:false});
+  btn.addEventListener('touchend',stop);
+  btn.addEventListener('touchcancel',stop);
+}
+
+// ── Wave/video mode toggle + theater/fullscreen ──
+function updateModeLabel(){
+  const stage=$('wp-stage');
+  const isVideo=stage&&stage.classList.contains('mode-video');
+  const waveIcon=document.querySelector('.wp-mode-icon-wave');
+  const videoIcon=document.querySelector('.wp-mode-icon-video');
+  const text=document.querySelector('.wp-mode-text');
+  if(waveIcon)waveIcon.style.display=isVideo?'none':'block';
+  if(videoIcon)videoIcon.style.display=isVideo?'block':'none';
+  if(text)text.textContent=isVideo?'video':'podcast';
+  const vc=$('wp-video-controls');
+  if(vc)vc.style.display=isVideo?'flex':'none';
+}
+function toggleWaveVideo(){
+  const stage=$('wp-stage');
+  if(!stage)return;
+  const goingVideo=stage.classList.contains('mode-wave');
+  stage.classList.toggle('mode-wave',!goingVideo);
+  stage.classList.toggle('mode-video',goingVideo);
+  updateModeLabel();
+  setupWaveCanvas();
+  if(!goingVideo){
+    // left video mode — also drop theater/fullscreen if active
+    const page=$('page-wireless');
+    if(page)page.classList.remove('theater-mode');
+    if(document.fullscreenElement)document.exitFullscreen&&document.exitFullscreen().catch(()=>{});
+  }
+}
+function toggleTheater(){
+  const page=$('page-wireless');
+  if(page)page.classList.toggle('theater-mode');
+}
+function toggleFullscreen(){
+  const stage=$('wp-stage');
+  if(!stage)return;
+  const isFs=document.fullscreenElement||document.webkitFullscreenElement;
+  if(!isFs){
+    if(stage.requestFullscreen)stage.requestFullscreen().catch(()=>{});
+    else if(stage.webkitRequestFullscreen)stage.webkitRequestFullscreen();
+  }else{
+    if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  }
+}
+
+// ── Spotify-style persistent mini-player, lives in the top music-bar
+// so playback + controls stay reachable from any page (not just
+// while the wireless page itself is open). ──
+function updateMiniPlayerUI(){
+  const mini=$('mini-player');
+  if(!mini)return;
+  const isPodcastActive=(typeof activeMusic!=='undefined'&&activeMusic==='podcast');
+  if(!currentEpisode){ mini.style.display='none'; return; }
+  mini.style.display='flex';
+  const title=$('mini-player-title');
+  if(title)title.textContent=currentEpisode.title||'The Wireless';
+  const playing=!!(ytPlayer&&typeof ytPlayer.getPlayerState==='function'&&ytPlayer.getPlayerState()===1&&isPodcastActive);
+  const playIcon=mini.querySelector('.mini-icon-play'),pauseIcon=mini.querySelector('.mini-icon-pause');
+  if(playIcon)playIcon.style.display=playing?'none':'block';
+  if(pauseIcon)pauseIcon.style.display=playing?'block':'none';
+  mini.classList.toggle('inactive',!isPodcastActive);
+}
+function miniPlayerTogglePlayPause(){
+  // If podcast isn't the active audio source right now, switching it
+  // on should resume the episode rather than just toggling ytPlayer
+  // (which might be paused because ambient music took over).
+  if(typeof activeMusic!=='undefined'&&activeMusic!=='podcast'){
+    toggleMusic('podcast');
+    return;
+  }
+  togglePlayPause();
+}
 
 function takeOverMusicForPodcast(){
   stopAmbientMusic();
@@ -71,10 +345,12 @@ function takeOverMusicForPodcast(){
   const el=document.querySelector('.music-opt[data-key="podcast"]');
   if(el)el.classList.add('playing');
   updateNP(currentEpisode?('🎙 '+currentEpisode.title):'🎙 The Wireless');
+  updateMiniPlayerUI();
 }
 
 function loadEpisode(ep){
   currentEpisode=ep;
+  _wpSyncGlobals();
   $('wp-placeholder').style.display='none';
   $('wp-now-title').textContent=ep.title;
   const saved=S.podcastProgress&&S.podcastProgress[ep.id];
@@ -88,6 +364,7 @@ function loadEpisode(ep){
   const commentsSection=$('wp-comments-section');
   if(commentsSection)commentsSection.style.display='block';
   if(typeof renderComments==='function')renderComments();
+  updateMiniPlayerUI();
 }
 function loadEpisodeById(id){
   const ep=(S.episodes||[]).find(e=>e.id===id);
@@ -399,6 +676,20 @@ function handleLiveBadgeClick(){
     requestAnimationFrame(seekBarUpdateLoop);
     drawWave(0);
     updateModeLabel();
+
+    // v01.31: persistent Spotify-style mini-player in the top music-bar
+    const miniPP=$('mini-player-playpause');
+    if(miniPP)miniPP.addEventListener('click',miniPlayerTogglePlayPause);
+    const miniPrev=$('mini-player-prev');
+    if(miniPrev)miniPrev.addEventListener('click',prevEpisode);
+    const miniNext=$('mini-player-next');
+    if(miniNext)miniNext.addEventListener('click',nextEpisode);
+    const miniTitle=$('mini-player-title');
+    if(miniTitle)miniTitle.addEventListener('click',()=>{
+      if(typeof openWirelessSmart==='function')openWirelessSmart();
+      else navigateTo('wireless');
+    });
+    updateMiniPlayerUI();
 
     // v01.08: live-stream badge — initial paint + periodic re-check
 
@@ -1005,21 +1296,13 @@ function shareShowToChat(showId){
 }
 
 // Toggle a user-owned show between public and private
-// showConfirmModal wrapper — uses native confirm if the modal helper isn't available
-function _wpConfirm(title, msg){
-  if(typeof showConfirmModal === 'function') return showConfirmModal(title, msg);
-  return Promise.resolve(confirm(title + '\n\n' + msg));
-}
-async function showConfirmModal(title, msg){
-  return new Promise(resolve=>{
-    // Check if a custom modal system exists
-    if(typeof openConfirmModal === 'function'){
-      openConfirmModal(title, msg, resolve);
-    } else {
-      resolve(confirm(title + '\n\n' + msg));
-    }
-  });
-}
+// (v01.31: this used to have its own duplicate showConfirmModal(title,msg)
+// that returned a Promise — a second, incompatible showConfirmModal(title,
+// body,onConfirm) defined later in this file always won via hoisting, so
+// `await showConfirmModal(...)` below resolved to undefined instantly and
+// confirmToggleShowPublic() bailed out before the user ever saw/answered
+// the modal. Removed the dead duplicate; confirmToggleShowPublic() now
+// uses the real modal's callback form directly.)
 
 async function toggleShowPublic(showId){
   if(!S.account){ toast('sign in to change visibility'); return; }
@@ -1146,18 +1429,22 @@ function renderYourStuff(){
       +'</div>';
   }).join('');
 }
-async function confirmToggleShowPublic(showId, currentlyPublic){
+function confirmToggleShowPublic(showId, currentlyPublic){
+  const proceed=async()=>{
+    await toggleShowPublic(showId);
+    renderYourStuff();
+    renderShowGrid();
+  };
   if(!currentlyPublic){
     // Making public — show confirmation
-    const ok=await showConfirmModal(
+    showConfirmModal(
       'Make this playlist public?',
-      'Anyone on the site will be able to see it and its videos in the main grid.'
+      'Anyone on the site will be able to see it and its videos in the main grid.',
+      proceed
     );
-    if(!ok)return;
+  }else{
+    proceed();
   }
-  await toggleShowPublic(showId);
-  renderYourStuff();
-  renderShowGrid();
 }
 
 // ── show banner + description editing ──
@@ -1229,11 +1516,16 @@ let wpEditingShowId=null;
 
 function openShowForm(showId){
   // v01.26: owner of a show can also edit it (not just admin)
+  // v01.31: creating a NEW show (showId falsy) was hard-gated to admin
+  // only, which silently broke the "+ new playlist" button for every
+  // signed-in regular user (openUserShowForm already checks S.account
+  // before calling this — saveShowForm() below has always had full
+  // support for non-admin creation, it just never got reached).
   if(showId){
     const show=(S.shows||[]).find(s=>s.id===showId);
     if(show && !S.adminUnlocked && !showIsOwnedByMe(show)){toast('not your show');return;}
   } else {
-    if(!S.adminUnlocked){toast('admin access required');return;}
+    if(!S.adminUnlocked && !S.account){toast('sign in to create a playlist');return;}
   }
   wpEditingShowId=showId;
   const show=showId?(S.shows||[]).find(s=>s.id===showId):null;

@@ -55,6 +55,26 @@ button{touch-action:manipulation}
   padding:6px 13px;color:var(--cream);font-family:'IM Fell English',serif;font-style:italic;
   font-size:.74rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
 .music-btn:hover{background:rgba(200,137,42,.28);}
+
+/* v01.31: Spotify-style mini-player, sits in the top music-bar so
+   podcast controls stay reachable from any page */
+.mini-player{display:flex;align-items:center;gap:6px;flex-shrink:0;
+  background:rgba(200,137,42,.1);border:1px solid rgba(200,137,42,.22);
+  border-radius:20px;padding:4px 10px 4px 6px;transition:opacity .2s ease;}
+.mini-player.inactive{opacity:.5;}
+.mini-player-btn{background:none;border:none;color:var(--cream);cursor:pointer;
+  padding:4px;display:flex;align-items:center;justify-content:center;opacity:.75;
+  transition:opacity .15s ease,transform .1s ease;}
+.mini-player-btn:hover{opacity:1;}
+.mini-player-btn:active{transform:scale(.88);}
+.mini-player-main{width:22px;height:22px;border-radius:50%;opacity:1;
+  background:radial-gradient(circle at 35% 28%,rgba(255,228,160,.98),rgba(200,137,42,.98));
+  color:#160c03;}
+.mini-player-title{font-family:'IM Fell English',serif;font-style:italic;font-size:.72rem;
+  color:var(--amber);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;}
+@media (max-width:520px){.mini-player-title{max-width:70px;}}
+
 .waveform{display:flex;align-items:center;gap:2px;height:18px;}
 .wave-bar{width:2px;background:var(--amber);border-radius:1px;animation:wavePulse 1s ease-in-out infinite;opacity:.65;}
 .wave-bar:nth-child(1){animation-delay:0s;}.wave-bar:nth-child(2){animation-delay:.15s;}

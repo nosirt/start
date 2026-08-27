@@ -7,6 +7,21 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.31',
+    date: '8/2026',
+    changes: [
+      'FIX: Wireless video player was permanently stuck invisible — #wp-stage never left "wave" mode because toggleWaveVideo(), toggleTheater() and toggleFullscreen() were wired to buttons but did not exist anywhere in the codebase. All three implemented.',
+      'FIX: the entire player control layer was missing — togglePlayPause, bindSeekBar (click+drag to seek), bindHoldButton (hold-to-fast-skip on ±10s), the wave visualizer (setupWaveCanvas/drawWave/startWave/stopWave), seekBarUpdateLoop, showWpControls and updateModeLabel were all called on load but never defined. Implemented all of them.',
+      'FIX: added onError handling to the YouTube player — a private/deleted/embed-restricted video now auto-skips to the next episode with a toast instead of silently getting stuck',
+      'FIX: window.ytPlayer / window.currentEpisode are now explicitly synced — top-level `let` bindings never attached to window, so background-audio.js\'s iOS keepalive resume checks (visibilitychange + SW periodic wake) were silently no-ops',
+      'FIX: signed-in non-admin users could not actually create a new show/playlist — openShowForm() hard-required admin unlock for the "new show" case even though openUserShowForm() and saveShowForm() both already had full non-admin support built in',
+      'FIX: removed a duplicate showConfirmModal() definition — the dead one (Promise-based) was silently shadowed by a second, incompatible one, which made confirmToggleShowPublic() ("make playlist public") resolve and bail before the user could ever confirm',
+      'FIX: selecting "The Wireless" from the sounds/music modal did nothing but relabel the now-playing text if no episode had loaded yet this session — it now resumes the last-played episode in the background, or opens the wireless page to pick one if nothing exists yet',
+      'NEW: Spotify-style persistent mini-player in the top music bar — prev/play-pause/next + title, reachable from any page once an episode has been loaded, dims (not hides) when podcast is not the active audio source',
+      'Version bumped to 01.31'
+    ]
+  },
+  {
     version: '01.30',
     date: '8/2025',
     changes: [
