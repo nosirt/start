@@ -248,6 +248,49 @@ function closeChatPanel(){
   $('chat-panel').classList.remove('open');
 }
 
+// v01.33: swipe-down-to-dismiss, matching the little grabber handle at
+// the top of the panel — that handle already existed visually but did
+// nothing when dragged. Deliberately scoped to a small dedicated handle
+// element rather than the whole panel background, so it never fights
+// with scrolling inside the message list.
+(function initChatPanelSwipeToDismiss(){
+  const handle = document.getElementById('chat-drag-handle');
+  const panel = document.getElementById('chat-panel-inner');
+  if(!handle || !panel) return;
+  let startY = 0, dragging = false, panelHeight = 0;
+  handle.addEventListener('pointerdown', e => {
+    dragging = true;
+    startY = e.clientY;
+    panelHeight = panel.getBoundingClientRect().height;
+    panel.classList.add('dragging');
+    try{ handle.setPointerCapture && handle.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  handle.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    const dy = Math.max(0, e.clientY - startY); // only allow dragging downward
+    panel.style.transform = `translateY(${dy}px)`;
+  });
+  const endDrag = e => {
+    if(!dragging) return;
+    dragging = false;
+    panel.classList.remove('dragging');
+    const dy = Math.max(0, (e.clientY||startY) - startY);
+    if(dy > panelHeight * 0.28){
+      // dragged past ~28% of the panel's height — dismiss
+      panel.style.transform = `translateY(${panelHeight}px)`;
+      setTimeout(()=>{ closeChatPanel(); panel.style.transform=''; }, 220);
+    } else {
+      panel.style.transform = '';
+    }
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', () => {
+    dragging = false;
+    panel.classList.remove('dragging');
+    panel.style.transform = '';
+  });
+})();
+
 function switchChatTab(tab){
   chatCurrentTab = tab;
   ['global','personal','stone'].forEach(t=>{

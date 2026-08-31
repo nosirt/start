@@ -7,6 +7,50 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.34',
+    date: '8/2026',
+    changes: [
+      'NEW: permanent short-id deep-link system for the wireless — every show and every episode now gets a random, never-reused 5-digit id the moment it\'s created, tracked forever in two dedicated Firestore registries (nosirt_show_ids, nosirt_episode_ids) so a code can never be handed out twice even after the show/episode it pointed to is deleted or renamed',
+      'NEW URLs: /wireless/{showId} and /wireless/{showId}/{episodeId} for public playlists; /{username}/wireless/{showId} and /{username}/wireless/{showId}/{episodeId} for private ones — only resolve for the logged-in owner (or admin), everyone else gets bounced to the wireless home without confirming the playlist even exists. The same show becomes reachable at the plain /wireless/{id} form automatically the moment it\'s made public — same id, just a second valid path to it',
+      'NEW: /chat, /chat/global, /chat/pixie, and /chat/{username} (opens a DM with that user, from whoever is currently signed in)',
+      'Browsing the wireless normally now keeps the address bar in sync automatically (via replaceState, so skipping through episodes doesn\'t flood the back button with one entry per track) — no separate "get link" step, whatever you\'re looking at IS the shareable link',
+      'Existing shows/episodes from before this update get their ids backfilled automatically the next time an admin session loads the site — regular visitors don\'t trigger this, so it won\'t hammer Firestore from every tab',
+      'NOTE: this relies on direct client Firestore writes to the two new id-registry collections, same pattern the rest of the show/episode system already uses — Firestore security rules need to permit writes to nosirt_show_ids / nosirt_episode_ids for this to work in production',
+      'Version bumped to 01.34'
+    ]
+  },
+  {
+    version: '01.33',
+    date: '8/2026',
+    changes: [
+      'AESTHETIC PASS (phase 1 of 2 — chat + wireless player this round, URL system next): reworked chat/DM/Pixie toward an iOS Messages feel — real speech bubbles with asymmetric corner radius (soft "tail" toward the sender, the same convention iOS itself uses now) instead of flat blockquote-style boxes with a colored border, frosted glass panel chrome instead of near-opaque black, a pill-shaped segmented tab control instead of underline tabs, bigger touch targets throughout (44px minimum)',
+      'FIX: sending a chat message closed the keyboard on mobile, which meant the chat area kept resizing every time you sent something — root cause was tapping the send button naturally blurs whatever input was focused; added a mousedown guard on all three send buttons (global chat, DM, Pixie) so the keyboard now stays open through sends',
+      'NEW: swipe-down-to-dismiss on the chat panel — the little grabber handle at the top existed visually before but did nothing when dragged; it now actually closes the panel with a real drag gesture, scoped to just the handle so it never fights with scrolling the message list',
+      'FIX: episode rows in the wireless player only got their rounded "card" look on :hover — which never fires on touch devices, so every row looked like a flat, divided list on mobile except whichever one was currently playing. Every row is a proper rounded card now regardless of hover/touch',
+      'Refined wireless player controls to match — bigger seek handle, glass-backed mini-player, bigger admin control tap targets',
+      'Version bumped to 01.33'
+    ]
+  },
+  {
+    version: '01.32',
+    date: '8/2026',
+    changes: [
+      'CRITICAL FIX: episodes on the wireless page were unclickable 100% of the time — renderEpisodes() built the click handler as onclick="loadEpisode(${JSON.stringify(ep)})", and JSON always opens with {" which prematurely closes the onclick="..." attribute (both use double quotes). The exact same bug existed on the "add to playlist" and "share to chat" buttons. All three now use ID-based lookups (loadEpisodeById, shareEpisodeToChatById, addEpisodeToPlaylistById) — this matches the pattern the working month-old version used and explains most of the "nothing happens when I click things" reports.',
+      'FIX: the "podcast" quick-play button (sounds modal) and the wireless page could load completely different things — pickDefaultEpisode() only checked S.episodes, which is scoped to whichever show is currently open. If no show had been opened yet, it always returned nothing. Now resolves a default show first (and searches saved progress across ALL shows) so it always finds something sensible.',
+      'FIX: added one canonical startOrResumePodcast() — the sounds-modal "Wireless" option and the mini-player both call this now instead of each keeping their own copy of the resume/pick/navigate logic, so they can\'t diverge again.',
+      'FIX: ambient tracks (lofi/dark/ancient stream URLs) could go silent after the first track switch — the Web Audio GainNode routing never resumed a suspended AudioContext (common after tab backgrounding), so later plays looked successful but produced no sound. Now resumes on every track switch and on tab visibility change.',
+      'FIX: the ±10s skip buttons could skip forever instead of once — pointerdown AND touchstart both fire for a single tap on touch devices, so the hold-repeat interval got created twice and the first one was orphaned (never cleared) once the second overwrote the same variable. Removed the redundant touch listeners; Pointer Events alone already cover touch/mouse/pen. Same duplicate-binding pattern removed from the seek bar for consistency.',
+      'FIX: starting the podcast often needed two taps — playVideo() from onReady fires after the video iframe\'s own network round-trip, which can land outside the browser\'s "this is a direct user gesture" window on the very first play of a session, so it would silently sit paused. Added a watchdog that detects this and retries automatically on the next tap anywhere, so one tap on "podcast" is now enough (and, combined with the pickDefaultEpisode fix above, plays the first/oldest episode immediately when there\'s no saved progress).',
+      'FIX: handleLiveBadgeClick() (the dedicated Midnight Archive shortcut) could get silently redirected to a different show — it explicitly sets the current show to Midnight Archive, but then called the general pickDefaultEpisode(), which follows a saved "resume" position into whatever show that was, undoing the line right above it. Split into pickEpisodeWithinCurrentShow() (never leaves the show that\'s already set — used by the Midnight Archive badge) vs pickDefaultEpisode() (free to resolve/switch shows — used by the generic "start the podcast" entry points).',
+      'FIX: the now-playing title could visually overflow onto the row below it ("double-stacked" look) — it\'s a flex child with no min-width set, so nowrap+ellipsis truncation never actually engaged (a classic flexbox gotcha: flex items default to min-width:auto, which lets nowrap content overflow instead of truncating). Added min-width:0.',
+      'FIX: the now-playing title could visually overflow onto the row below it ("double-stacked" look) — it\'s a flex child with no min-width set, so nowrap+ellipsis truncation never actually engaged (a classic flexbox gotcha: flex items default to min-width:auto, which lets nowrap content overflow instead of truncating). Added min-width:0.',
+      'FIX: the floating Pixie icon on the map could not be tapped to open chat — same double-binding root cause as the player fixes above: pointerup fires before touchend for the same tap, so the document-level pointerup handler cleared pixieDragging first, and by the time touchend ran its own guard clause it always bailed out before reaching openPixieDmThread(). Removed the redundant touch listeners; the tap-to-open check now lives in pointerup where it actually runs.',
+      'FIX: Pixie AI fallback chain was silently burning through several dead layers on every message — GEMINI_MODEL (gemini-flash-latest) and GROQ_MODEL (llama-3.3-70b-versatile, deprecated by Groq Aug 16 2026) were both pointing at broken/deprecated model IDs, and Cerebras\'s free-tier catalog had been pruned down to just two models, orphaning CEREBRAS_MODEL (llama-3.3-70b) too. Updated all three to current, verified-working IDs (gemini-2.5-flash, openai/gpt-oss-120b, gpt-oss-120b). This is why replies had gone from instant to several seconds — every message was timing out through 2-3 dead layers first. NVIDIA/MISTRAL/LIGHTNING left unchanged (no evidence found that those specific IDs are currently broken) — worth spot-checking those against each provider\'s console periodically, since these free-tier catalogs churn without notice.',
+      'NEW: admin-only custom directive system — while admin is unlocked, any message wrapped in (...) sets a standing instruction sent with every future Pixie call, taking priority over the base persona until replaced by another (...) message. Nothing about the wording is hardcoded; the model interprets whatever text is inside the parens directly, so "(get out of character)" and "(be in character)" both just work as plain instructions rather than being special-cased commands. The existing (open)/(close) dev-mode toggle is unchanged and still takes priority as a dedicated command.',
+      'Version bumped to 01.32'
+    ]
+  },
+  {
     version: '01.31',
     date: '8/2026',
     changes: [

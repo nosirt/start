@@ -768,7 +768,8 @@
 
 <!-- v01.08: chat panel — Global Chat / Personal Chat / Carved in Stone -->
 <div id="chat-panel">
-  <div class="chat-panel-inner">
+  <div class="chat-panel-inner" id="chat-panel-inner">
+    <div class="chat-drag-handle" id="chat-drag-handle"></div>
     <div class="chat-tabs">
       <button id="chat-tabbtn-global" class="chat-tab-btn active" onclick="switchChatTab('global')">global chat</button>
       <button id="chat-tabbtn-personal" class="chat-tab-btn" onclick="switchChatTab('personal')">personal</button>
@@ -798,7 +799,7 @@
         <input id="chat-image-input" type="file" accept="image/*" style="display:none" onchange="handleChatImageFileSelected(this)">
         <button class="chat-send-btn" onclick="openSharePicker({type:'global'})" title="share something">📎</button>
         <input id="chat-global-input" class="chat-text-input" type="text" placeholder="say something…" maxlength="500" onkeydown="handleChatInputKeydown(event)">
-        <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
+        <button class="chat-send-btn" onmousedown="event.preventDefault()" onclick="sendChatMessage()">➤</button>
       </div>
     </div>
 

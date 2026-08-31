@@ -488,12 +488,118 @@ function navigateTo(path,push){
     if(S.featureToggles.castle===false){showUnderReviewNote('castle');showMap();return;}
     showMap();openCastle();return;
   }
+  // v01.34: multi-segment deep links — /wireless/{id}[/{id}],
+  // /{username}/wireless/{id}[/{id}], and /chat/{sub}. Checked before
+  // the single-segment ROUTE_TO_PAGE lookup since these are 2-4
+  // segments long. See handleWirelessDeepLinkSegments() and
+  // handleChatDeepLinkSegments() below for the actual resolution.
+  const segments=path.split('/').filter(Boolean);
+  if(segments.length>=2 && segments[0]==='wireless'){
+    handleWirelessDeepLinkSegments(segments);
+    return;
+  }
+  if(segments.length>=3 && segments[1]==='wireless'){
+    handleWirelessDeepLinkSegments(segments);
+    return;
+  }
+  if(segments.length>=1 && segments[0]==='chat'){
+    handleChatDeepLinkSegments(segments);
+    return;
+  }
   const internal=ROUTE_TO_PAGE[path];
   if(internal){
     if(S.featureToggles[internal]===false){showUnderReviewNote(internal);showMap();return;}
     if(internal==='wireless'){openWirelessSmart();return;}
     showPage(internal);
   }else showMap();
+}
+
+// v01.34: resolves /wireless/{showId}[/{episodeId}] (public) and
+// /{username}/wireless/{showId}[/{episodeId}] (owner-only, private or
+// public) deep links. Shows and episodes load asynchronously (episodes
+// specifically are lazy-loaded only once the wireless page itself is
+// opened — see ensureWirelessEpisodesListener), so this can't always
+// resolve synchronously on a fresh page load: it stashes what it's
+// looking for in S.pendingWirelessDeepLink and re-attempts every time
+// new show/episode data arrives, via _tryResolvePendingWirelessDeepLink()
+// (called from wireless.js's Firestore listeners).
+function handleWirelessDeepLinkSegments(segments){
+  let username=null, showShortId, epShortId;
+  if(segments[0]==='wireless'){
+    showShortId=segments[1]; epShortId=segments[2];
+  } else {
+    username=segments[0]; showShortId=segments[2]; epShortId=segments[3];
+  }
+  if(!/^\d{5}$/.test(showShortId||'')){ showMap(); return; } // malformed id, don't even try
+  S.pendingWirelessDeepLink={username,showShortId,epShortId};
+  showPage('wireless');
+  _tryResolvePendingWirelessDeepLink();
+}
+
+function _tryResolvePendingWirelessDeepLink(){
+  const pending=S.pendingWirelessDeepLink;
+  if(!pending) return;
+  if(!S.shows || !S.shows.length) return; // shows haven't loaded yet — will retry on next listener fire
+  const show=typeof getShowByShortId==='function' ? getShowByShortId(pending.showShortId) : null;
+  if(!show){
+    S.pendingWirelessDeepLink=null;
+    toast("that playlist doesn't exist (or was removed)");
+    showWirelessHome();
+    return;
+  }
+  if(pending.username){
+    // Owner-qualified URL — only the matching logged-in owner may view,
+    // regardless of the show's public/private status. Everyone else,
+    // signed in or not, gets bounced to the wireless home per spec.
+    // Admin gets the same blanket visibility here as everywhere else
+    // in the app (showIsVisibleToUser/showIsOwnedByMe already grant it).
+    if(!S.adminUnlocked && (!S.account || S.account.username!==pending.username || show.owner!==pending.username)){
+      S.pendingWirelessDeepLink=null;
+      showWirelessHome();
+      return;
+    }
+  } else {
+    // Plain public-style URL — only valid once the show is actually
+    // public. A private show simply isn't reachable this way, even if
+    // you happen to know its id — don't leak that it exists.
+    if(!show.isPublic){
+      S.pendingWirelessDeepLink=null;
+      showWirelessHome();
+      return;
+    }
+  }
+  setActiveShow(show.id,{autoplay:false});
+  if(pending.epShortId){
+    if(!S.showEpisodesAll || !S.showEpisodesAll.length) return; // episodes not loaded yet — retry later
+    const ep=typeof getEpisodeByShortId==='function' ? getEpisodeByShortId(pending.epShortId) : null;
+    if(ep && ep.showId===show.id) loadEpisode(ep);
+  }
+  S.pendingWirelessDeepLink=null;
+}
+
+// v01.34: /chat, /chat/global, /chat/pixie, /chat/{username} (DM with
+// that user, from whoever is currently logged in).
+function handleChatDeepLinkSegments(segments){
+  showMap();
+  if(typeof openChatPanel!=='function')return;
+  const sub=segments[1];
+  if(!sub || sub==='global'){
+    openChatPanel();
+    return;
+  }
+  if(sub==='pixie'){
+    openChatPanel();
+    if(typeof switchChatTab==='function')switchChatTab('personal');
+    if(typeof openPixieDm==='function')openPixieDm();
+    return;
+  }
+  if(!S.account){
+    toast('sign in to message someone');
+    return;
+  }
+  openChatPanel();
+  if(typeof switchChatTab==='function')switchChatTab('personal');
+  if(typeof openDmThread==='function')openDmThread(sub);
 }
 
 window.addEventListener('popstate',()=>{navigateTo(currentRoutePath(),false);});

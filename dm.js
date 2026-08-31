@@ -103,7 +103,7 @@ function renderPixieDmThreadView(container){
     <div id="pixie-dm-messages" class="chat-messages" style="flex:1"></div>
     <div class="chat-input-bar">
       <input id="pixie-dm-input" class="chat-text-input" type="text" placeholder="say something…" maxlength="300" onkeydown="handlePixieDmInputKeydown(event)">
-      <button class="chat-send-btn" onclick="sendPixieDmMessage()">➤</button>
+      <button class="chat-send-btn" onmousedown="event.preventDefault()" onclick="sendPixieDmMessage()">➤</button>
     </div>
   `;
   const msgEl = $('pixie-dm-messages');
@@ -437,7 +437,7 @@ function renderDmThreadView(container){
     <div class="chat-input-bar">
       <button class="chat-send-btn" onclick="openSharePicker({type:'dm', to:'${esc(other)}'})" title="share something">📎</button>
       <input id="dm-thread-input" class="chat-text-input" type="text" placeholder="message ${esc(other)}…" maxlength="1000" onkeydown="handleDmInputKeydown(event)">
-      <button class="chat-send-btn" onclick="sendDmMessage()">➤</button>
+      <button class="chat-send-btn" onmousedown="event.preventDefault()" onclick="sendDmMessage()">➤</button>
     </div>
   `;
 

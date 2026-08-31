@@ -37,9 +37,30 @@ function onYouTubeIframeAPIReady(){
 
 let pendingSeekSeconds=null;
 
+// v01.32: playVideo() from onReady happens after the iframe's own network
+// round-trip, which can land outside the browser's "this counts as a
+// direct user gesture" window on the very first play of a session — the
+// video then just sits paused with no error at all, which looked like
+// "the podcast needs two taps" (first tap creates/loads it, a second
+// direct tap on a control is what actually starts sound, because THAT
+// tap is a fresh, synchronous gesture). This watches for that happening
+// and retries automatically on the very next tap anywhere on the page,
+// so in practice a single tap on "podcast" is enough.
+let _autoplayWatchdogTimer=null;
+function _armAutoplayWatchdog(){
+  if(_autoplayWatchdogTimer)clearTimeout(_autoplayWatchdogTimer);
+  _autoplayWatchdogTimer=setTimeout(()=>{
+    _autoplayWatchdogTimer=null;
+    if(!ytPlayer||typeof ytPlayer.getPlayerState!=='function')return;
+    if(ytPlayer.getPlayerState()===1)return; // already actually playing — nothing to do
+    const retry=()=>{ if(ytPlayer)ytPlayer.playVideo(); };
+    document.addEventListener('pointerdown',retry,{once:true});
+  },900);
+}
+
 function createPlayer(videoId){
   if(!ytApiReady){pendingVideoId=videoId;return;}
-  if(ytPlayer){ytPlayer.loadVideoById(videoId);return;}
+  if(ytPlayer){ytPlayer.loadVideoById(videoId);_armAutoplayWatchdog();return;}
   ytPlayer=new YT.Player('yt-player',{
     videoId:videoId,
     playerVars:{controls:0,modestbranding:1,rel:0,playsinline:1,cc_load_policy:1,iv_load_policy:3,fs:0},
@@ -48,6 +69,7 @@ function createPlayer(videoId){
         _wpSyncGlobals();
         ytPlayer.playVideo();
         const cp=$('wp-center-play');if(cp)cp.style.display='none';
+        _armAutoplayWatchdog();
       },
       onStateChange:onPlayerStateChange,
       onError:onPlayerError
@@ -184,27 +206,26 @@ function bindSeekBar(){
   };
   const start=e=>{
     wpDraggingSeek=true;
-    const x=e.touches?e.touches[0].clientX:e.clientX;
-    seekFromEvent(x,false);
+    seekFromEvent(e.clientX,false);
     e.preventDefault&&e.preventDefault();
   };
   const move=e=>{
     if(!wpDraggingSeek)return;
-    const x=e.touches?e.touches[0].clientX:e.clientX;
-    seekFromEvent(x,false);
+    seekFromEvent(e.clientX,false);
   };
   const end=e=>{
     if(!wpDraggingSeek)return;
     wpDraggingSeek=false;
-    const x=(e.changedTouches?e.changedTouches[0].clientX:e.clientX);
-    if(typeof x==='number')seekFromEvent(x,true);
+    seekFromEvent(e.clientX,true);
   };
+  // v01.32: Pointer Events already unify mouse/touch/pen on every modern
+  // browser — the old code ALSO bound touchstart/touchmove/touchend on
+  // top of these, which double-fires on every touch tap (both event
+  // families fire for the same physical touch), racing two drag states
+  // against each other. Pointer Events alone is correct and sufficient.
   bar.addEventListener('pointerdown',start);
   window.addEventListener('pointermove',move);
   window.addEventListener('pointerup',end);
-  bar.addEventListener('touchstart',start,{passive:false});
-  window.addEventListener('touchmove',move,{passive:false});
-  window.addEventListener('touchend',end);
   // plain click (no drag) also jumps
   bar.addEventListener('click',e=>{
     if(wpDraggingSeek)return;
@@ -238,9 +259,16 @@ function seekBarUpdateLoop(ts){
 
 // ── Hold-to-fast-skip on the ±10s buttons: a tap does one 10s jump,
 // a hold repeats every 350ms until released ──
+// v01.32: the ±10s buttons used to skip forever after a single tap.
+// Root cause: pointerdown AND touchstart both fire for one physical
+// tap on touch devices, so start() ran twice — the second call
+// overwrote `holdTimer` with a new interval, orphaning the first one
+// with no reference left to clear it, so it kept firing every 350ms
+// forever. Pointer Events alone already cover touch/mouse/pen, so the
+// touch listeners were pure duplication — removed them.
 function bindHoldButton(btn,dir){
   if(!btn)return;
-  let holdTimer=null,heldOnce=false;
+  let holdTimer=null;
   const skip=()=>{
     if(!ytPlayer||typeof ytPlayer.getCurrentTime!=='function')return;
     let cur=0,dur=0;
@@ -249,9 +277,9 @@ function bindHoldButton(btn,dir){
     ytPlayer.seekTo(next,true);
   };
   const start=e=>{
-    heldOnce=false;
+    stop(); // guard against any stray double-fire leaving an orphaned interval
     skip();
-    holdTimer=setInterval(()=>{heldOnce=true;skip();},350);
+    holdTimer=setInterval(skip,350);
     e.preventDefault&&e.preventDefault();
   };
   const stop=()=>{
@@ -260,9 +288,7 @@ function bindHoldButton(btn,dir){
   btn.addEventListener('pointerdown',start);
   btn.addEventListener('pointerup',stop);
   btn.addEventListener('pointerleave',stop);
-  btn.addEventListener('touchstart',start,{passive:false});
-  btn.addEventListener('touchend',stop);
-  btn.addEventListener('touchcancel',stop);
+  btn.addEventListener('pointercancel',stop);
 }
 
 // ── Wave/video mode toggle + theater/fullscreen ──
@@ -355,7 +381,7 @@ function loadEpisode(ep){
   $('wp-now-title').textContent=ep.title;
   const saved=S.podcastProgress&&S.podcastProgress[ep.id];
   pendingSeekSeconds=(saved&&saved.seconds)?saved.seconds:null;
-  if(ytPlayer)ytPlayer.loadVideoById(ep.videoId);
+  if(ytPlayer){ytPlayer.loadVideoById(ep.videoId);_armAutoplayWatchdog();}
   else{pendingVideoId=ep.videoId;createPlayer(ep.videoId);}
   localStorage.setItem('n_last_podcast_ep',ep.id);
   renderEpisodes();
@@ -365,9 +391,157 @@ function loadEpisode(ep){
   if(commentsSection)commentsSection.style.display='block';
   if(typeof renderComments==='function')renderComments();
   updateMiniPlayerUI();
+  if(typeof syncWirelessUrl==='function')syncWirelessUrl();
 }
+/* ============================================================
+   v01.34: PERMANENT SHORT-ID SYSTEM for deep links
+   Every show and every episode gets a random 5-digit id the moment
+   it's created — never reused, even after the show/episode is later
+   deleted or renamed. Two dedicated Firestore collections act as a
+   permanent registry (never deleted from, only ever added to):
+     nosirt_show_ids/{5digit}    -> { internalId, owner, createdAt }
+     nosirt_episode_ids/{5digit} -> { internalId, showId, createdAt }
+   The registry is what guarantees "never reuse" survives deletion —
+   S.shows/S.showEpisodesAll only contain what's currently live, but
+   the registry doc for a since-deleted item is left in place forever
+   so that 5-digit code can never be handed out again.
+   URL shapes (see map-layout.js for the router side):
+     /wireless/{showId}                          — public show
+     /wireless/{showId}/{episodeId}               — public show, specific episode
+     /{owner}/wireless/{showId}                   — private show, owner viewing it
+     /{owner}/wireless/{showId}/{episodeId}       — same, specific episode
+   ============================================================ */
+const SHOW_ID_REGISTRY = 'nosirt_show_ids';
+const EPISODE_ID_REGISTRY = 'nosirt_episode_ids';
+
+function _random5Digit(){
+  return String(Math.floor(10000 + Math.random()*90000));
+}
+
+// Single transactional allocation — used for the "create one show" and
+// "add one episode" paths, where a real transaction is worth the cost
+// since two different people could theoretically be creating something
+// at the same instant.
+async function allocateShortId(registryCollection, maxAttempts=10){
+  if(!db) return _random5Digit(); // offline/no-Firebase fallback, extremely unlikely to collide in practice
+  for(let i=0;i<maxAttempts;i++){
+    const candidate=_random5Digit();
+    const ref=db.collection(registryCollection).doc(candidate);
+    try{
+      const claimed=await db.runTransaction(async tx=>{
+        const snap=await tx.get(ref);
+        if(snap.exists) return false;
+        tx.set(ref,{reservedAt:Date.now()});
+        return true;
+      });
+      if(claimed) return candidate;
+    }catch(e){ console.warn('shortId allocation attempt failed:',e.message); }
+  }
+  // Astronomically unlikely with a 90,000-value space unless the
+  // registry is nearly full — fall back to a random code rather than
+  // block content creation entirely.
+  console.warn('shortId allocation exhausted attempts, using unchecked fallback');
+  return _random5Digit();
+}
+
+// Finalizes a reservation from allocateShortId() with the real pointer
+// data once the actual show/episode doc id is known. Split from
+// allocation because the internal id (e.g. 'show'+Date.now()) is often
+// only decided in the same breath as calling allocateShortId().
+function claimShortId(registryCollection, shortId, pointerData){
+  if(!db) return;
+  db.collection(registryCollection).doc(shortId).set(
+    Object.assign({reservedAt:Date.now()},pointerData), {merge:true}
+  ).catch(e=>console.warn('shortId claim failed:',e.message));
+}
+
+// Bulk variant for playlist import (up to hundreds of episodes at once)
+// — checks candidates in parallel batches rather than one full
+// transaction per episode, which would be far too slow for a 300-video
+// import. Collision risk here is negligible in practice (a handful of
+// codes out of a 90,000-value space, checked against the live registry
+// before use) and this only ever runs from a single admin/owner action,
+// not many concurrent users.
+async function allocateShortIdsBatch(registryCollection, count){
+  const out=[];
+  const seen=new Set();
+  let guard=0;
+  while(out.length<count && guard<count*20){
+    guard++;
+    const batch=[];
+    while(batch.length<Math.min(20,count-out.length)){
+      const c=_random5Digit();
+      if(!seen.has(c)){ seen.add(c); batch.push(c); }
+    }
+    if(!db){ out.push(...batch); continue; }
+    const results=await Promise.all(batch.map(c=>
+      db.collection(registryCollection).doc(c).get().then(snap=>({c,taken:snap.exists})).catch(()=>({c,taken:true}))
+    ));
+    results.forEach(r=>{ if(!r.taken) out.push(r.c); });
+  }
+  return out.slice(0,count);
+}
+
+function getShowByShortId(shortId){
+  return (S.shows||[]).find(s=>s.shortId===shortId) || null;
+}
+function getEpisodeByShortId(shortId){
+  return (S.showEpisodesAll||[]).find(e=>e.shortId===shortId) || null;
+}
+
+// v01.34: builds the correct share/address-bar URL for a show — public
+// form if it's public, owner-qualified private form otherwise. Falls
+// back to the generic wireless page if the show has no shortId yet
+// (shouldn't happen for anything created after this update, but covers
+// content that hasn't been backfilled — see backfillMissingShortIds()).
+function buildShowUrl(show){
+  if(!show) return '/wireless';
+  if(!show.shortId) return '/wireless';
+  if(show.isPublic) return '/wireless/'+show.shortId;
+  return '/'+encodeURIComponent(show.owner||'')+'/wireless/'+show.shortId;
+}
+function buildEpisodeUrl(show,ep){
+  const base=buildShowUrl(show);
+  if(!ep||!ep.shortId||base==='/wireless') return base;
+  return base+'/'+ep.shortId;
+}
+
+// v01.34: one-time-per-item backfill for shows/episodes that predate
+// this update and don't have a shortId yet. Runs opportunistically
+// whenever the shows/episodes listeners deliver data — cheap no-op for
+// anything that already has one, and only the admin's own browser
+// session actually performs the allocation+write (regular visitors
+// just read whatever's already there), so this doesn't hammer Firestore
+// from every visitor's tab.
+let _backfillingShows=false, _backfillingEpisodes=false;
+async function backfillMissingShortIds(){
+  if(!S.adminUnlocked || !db) return;
+  if(!_backfillingShows){
+    _backfillingShows=true;
+    for(const s of (S.shows||[])){
+      if(s.shortId) continue;
+      try{
+        const shortId=await allocateShortId(SHOW_ID_REGISTRY);
+        claimShortId(SHOW_ID_REGISTRY,shortId,{internalId:s.id,owner:s.owner||null});
+        await db.collection('nosirt_shows').doc(s.id).set({shortId},{merge:true});
+      }catch(e){ console.warn('show shortId backfill failed for',s.id,e.message); }
+    }
+  }
+  if(!_backfillingEpisodes){
+    _backfillingEpisodes=true;
+    for(const e of (S.showEpisodesAll||[])){
+      if(e.shortId) continue;
+      try{
+        const shortId=await allocateShortId(EPISODE_ID_REGISTRY);
+        claimShortId(EPISODE_ID_REGISTRY,shortId,{internalId:e.id,showId:e.showId});
+        await db.collection('nosirt_show_episodes').doc(e.id).set({shortId},{merge:true});
+      }catch(err){ console.warn('episode shortId backfill failed for',e.id,err.message); }
+    }
+  }
+}
+
 function loadEpisodeById(id){
-  const ep=(S.episodes||[]).find(e=>e.id===id);
+  const ep=(S.episodes||[]).find(e=>e.id===id) || (S.showEpisodesAll||[]).find(e=>e.id===id);
   if(ep)loadEpisode(ep);
 }
 // v01.09: decide which episode plays when the user starts the podcast
@@ -375,17 +549,76 @@ function loadEpisodeById(id){
 // of saved position; otherwise resume where they left off; otherwise
 // start from the OLDEST episode (a new listener starts at the beginning).
 // S.episodes is sorted ascending by `order`, so the oldest is first.
-function pickDefaultEpisode(){
+//
+// v01.32: split into two: pickEpisodeWithinCurrentShow() only ever looks
+// at S.episodes (whichever show is already open — used by the Midnight
+// Archive badge, which must never jump to a different show), while
+// pickDefaultEpisode() is the general "start the podcast from anywhere"
+// version that will resolve/switch to a show first if needed. Previously
+// there was only one function doing both jobs, which meant the two could
+// step on each other's toes.
+function pickEpisodeWithinCurrentShow(){
   if(!S.episodes||!S.episodes.length)return null;
+  const liveEp=S.episodes.find(e=>e.isLive);
+  if(liveEp)return liveEp;
   const lastId=localStorage.getItem('n_last_podcast_ep');
   const resumed=lastId&&S.episodes.find(e=>e.id===lastId);
   if(resumed)return resumed;
   return S.episodes[0]; // oldest
 }
 
+function pickDefaultEpisode(){
+  // 1) resume exactly where they left off, in whichever show that was —
+  // search across ALL shows' episodes, not just the currently-open one
+  const lastId=localStorage.getItem('n_last_podcast_ep');
+  if(lastId){
+    const ep=(S.showEpisodesAll||[]).find(e=>e.id===lastId);
+    if(ep){
+      if(S.currentShowId!==ep.showId){S.currentShowId=ep.showId;refreshCurrentShowEpisodes();}
+      return ep;
+    }
+  }
+  // 2) no saved position (or it's gone) — fall back to a default show:
+  // Midnight Archive > admin-flagged default > first show that exists
+  if(!S.currentShowId || !S.episodes || !S.episodes.length){
+    const show=(typeof getMidnightArchiveShow==='function'&&getMidnightArchiveShow())
+             || (typeof getDefaultShow==='function'&&getDefaultShow())
+             || (S.shows&&S.shows[0]);
+    if(!show)return null;
+    if(S.currentShowId!==show.id){S.currentShowId=show.id;refreshCurrentShowEpisodes();}
+  }
+  if(!S.episodes||!S.episodes.length)return null;
+  const liveEp=S.episodes.find(e=>e.isLive);
+  if(liveEp)return liveEp;
+  return S.episodes[0]; // oldest
+}
+
 function loadDefaultEpisode(){
   const ep=pickDefaultEpisode();
   if(ep)loadEpisode(ep);
+}
+
+// v01.32: the ONE function every "start the podcast" entry point should
+// call — the sounds modal's "The Wireless" option, the mini-player, and
+// (indirectly) Pixie all route through this now, so they can no longer
+// diverge. Resumes/continues in place without navigating if something's
+// already loaded; otherwise loads a sensible default episode right where
+// the user is (no forced page jump — matches the original "plays in the
+// background" behavior); only navigates to the wireless page as a last
+// resort, when there's truly nothing to play yet.
+function startOrResumePodcast(){
+  if(currentEpisode && ytPlayer){
+    ytPlayer.playVideo();
+    takeOverMusicForPodcast();
+    return true;
+  }
+  const ep=pickDefaultEpisode();
+  if(ep){
+    loadEpisode(ep);
+    return true;
+  }
+  if(typeof openWirelessSmart==='function')openWirelessSmart();
+  return false;
 }
 
 
@@ -525,7 +758,16 @@ function addEpisode(){
   if(!videoId){toast("that doesn't look like a youtube link");return;}
   const id='ep'+Date.now();
   const ep={id,showId:S.currentShowId,title,desc,videoId,order:nextEpisodeOrder(),addedAt:Date.now()};
-  fbSaveShowEpisode(id,ep);
+  // v01.34: permanent shortId, allocated once at creation (see the
+  // short-id system comment block above loadEpisodeById)
+  allocateShortId(EPISODE_ID_REGISTRY).then(shortId=>{
+    claimShortId(EPISODE_ID_REGISTRY,shortId,{internalId:id,showId:S.currentShowId});
+    ep.shortId=shortId;
+    fbSaveShowEpisode(id,ep);
+  }).catch(e=>{
+    console.warn('episode shortId allocation failed:',e.message);
+    fbSaveShowEpisode(id,ep); // still save the episode even if the id allocation hiccups
+  });
   $('wp-ep-title').value='';$('wp-ep-url').value='';$('wp-ep-desc').value='';
   toast('video added ✓');
 
@@ -551,19 +793,27 @@ async function importPlaylist(){
       const resp=await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${encodeURIComponent(playlistId)}&pageToken=${pageToken}&key=${YOUTUBE_API_KEY}`);
       const data=await resp.json();
       if(data.error)throw new Error(data.error.message||'YouTube API error');
-      const items=data.items||[];
-      const batch=db.batch();
-      items.forEach(item=>{
+      const items=(data.items||[]).filter(item=>{
         const vid=item.snippet&&item.snippet.resourceId&&item.snippet.resourceId.videoId;
-        if(!vid)return;
+        const rawTitle=(item.snippet&&item.snippet.title||'untitled').trim();
+        return vid && rawTitle!=='Private video' && rawTitle!=='Deleted video';
+      });
+      // v01.34: allocate a shortId for every episode in this page up
+      // front (in parallel) rather than one Firestore transaction per
+      // video — see allocateShortIdsBatch() above for why.
+      const shortIds=await allocateShortIdsBatch(EPISODE_ID_REGISTRY, items.length);
+      const batch=db.batch();
+      items.forEach((item,idx)=>{
+        const vid=item.snippet.resourceId.videoId;
         const rawTitle=(item.snippet.title||'untitled').trim();
-        if(rawTitle==='Private video'||rawTitle==='Deleted video')return;
         const id='ep'+Date.now()+'_'+vid;
         order++;
+        const shortId=shortIds[idx];
         batch.set(db.collection('nosirt_show_episodes').doc(id),{
           id,showId:S.currentShowId,title:filt(rawTitle),desc:'',videoId:vid,
-          order,addedAt:Date.now()
+          order,addedAt:Date.now(),shortId:shortId||null
         });
+        if(shortId) batch.set(db.collection(EPISODE_ID_REGISTRY).doc(shortId),{internalId:id,showId:S.currentShowId,reservedAt:Date.now()});
         imported++;
       });
       await batch.commit();
@@ -593,7 +843,12 @@ function handleLiveBadgeClick(){
   const show=getMidnightArchiveShow()||getDefaultShow();
   if(!show){navigateTo('wireless');return;}
   if(S.currentShowId!==show.id){S.currentShowId=show.id;refreshCurrentShowEpisodes();}
-  const ep=pickDefaultEpisode();
+  // v01.32: must stay scoped to Midnight Archive specifically — the
+  // general pickDefaultEpisode() will follow a saved "resume" position
+  // into a DIFFERENT show, which would silently undo the line above and
+  // defeat the whole point of this being a dedicated Midnight Archive
+  // shortcut. pickEpisodeWithinCurrentShow() never leaves S.episodes.
+  const ep=pickEpisodeWithinCurrentShow();
   if(!ep){navigateTo('wireless');return;} // no videos exist yet at all
   loadEpisode(ep);
   toast('▶ '+ep.title);
@@ -1081,6 +1336,8 @@ function ensureWirelessEpisodesListener(){
     if(S.currentShowId)refreshCurrentShowEpisodes();
     if(S.wpView==='show')renderEpisodes();
     if(S.wpView==='home'||!S.wpView)renderShowGrid();
+    if(typeof backfillMissingShortIds==='function')backfillMissingShortIds();
+    if(typeof _tryResolvePendingWirelessDeepLink==='function')_tryResolvePendingWirelessDeepLink();
 
   });
 }
@@ -1091,6 +1348,8 @@ async function initWirelessShows(){
     S.shows=(items||[]).sort((a,b)=>(a.order||0)-(b.order||0));
     if(S.currentShowId)refreshCurrentShowEpisodes();
     if(S.wpView==='home'||!S.wpView)renderShowGrid();
+    if(typeof backfillMissingShortIds==='function')backfillMissingShortIds();
+    if(typeof _tryResolvePendingWirelessDeepLink==='function')_tryResolvePendingWirelessDeepLink();
   });
   fbListenComments(items=>{
     S.comments=items||[];
@@ -1107,12 +1366,29 @@ function showWirelessHome(){
   if(home)home.style.display='block';
   renderShowGrid();
   updateWirelessToolbar();
+  if(!S.pendingWirelessDeepLink && location.pathname!=='/wireless') history.replaceState({path:'wireless'},'','/wireless');
 }
 
 function updateWirelessToolbar(){
   // Single "my stuff" button replaces the old scattered add/create buttons
   const stuffBtn = $('btn-your-stuff');
   if(stuffBtn) stuffBtn.style.display = (S.adminUnlocked || S.account) ? 'inline-flex' : 'none';
+}
+
+// v01.34: keeps the address bar in sync with whatever show/episode is
+// currently open, so browsing normally naturally produces a real,
+// shareable deep link — no separate "get link" step needed. Uses
+// replaceState (not pushState) so skipping through episodes doesn't
+// flood the back button with one history entry per track; only skipped
+// while a deep link is actively being resolved, to avoid the resolver
+// and this fighting each other over the URL.
+function syncWirelessUrl(){
+  if(S.pendingWirelessDeepLink) return;
+  const show=(S.shows||[]).find(s=>s.id===S.currentShowId);
+  if(!show) return;
+  const ep=(S.episodes||[]).find(e=>e.id===(currentEpisode&&currentEpisode.id));
+  const url=(currentEpisode&&currentEpisode.showId===show.id) ? buildEpisodeUrl(show,ep||currentEpisode) : buildShowUrl(show);
+  if(location.pathname!==url) history.replaceState({path:url.replace(/^\//,'')},'',url);
 }
 
 function setActiveShow(showId,opts){
@@ -1140,6 +1416,7 @@ function setActiveShow(showId,opts){
   const addBtn=$('wp-add-ep-btn');
   if(addBtn)addBtn.style.display=isCurrentShowMine()?'inline-flex':'none';
   if(opts.autoplay)loadDefaultEpisode();
+  syncWirelessUrl();
 }
 function openShow(showId){ setActiveShow(showId,{autoplay:false}); }
 
@@ -1274,6 +1551,24 @@ function shareEpisodeToChat(ep){
   };
   if(typeof sendSharedCardToChat==='function') sendSharedCardToChat(card);
   else toast('share sent to chat');
+}
+// v01.32: onclick handlers can't safely embed a raw JSON.stringify(ep)
+// object literal — JSON always opens with `{"`, and that first `"`
+// terminates the surrounding onclick="..." attribute immediately, so
+// clicking silently did nothing for every episode, always. This ID-based
+// wrapper is what the onclick handlers below actually call.
+function shareEpisodeToChatById(id){
+  const ep=(S.episodes||[]).find(e=>e.id===id) || (S.showEpisodesAll||[]).find(e=>e.id===id);
+  if(ep)shareEpisodeToChat(ep);
+}
+// same broken-attribute problem as above — addToPlaylist({...}) with a
+// raw title interpolated via JSON.stringify() also opens with a `"` that
+// terminates the onclick="..." attribute early. ID-based wrapper instead.
+function addEpisodeToPlaylistById(id){
+  const ep=(S.episodes||[]).find(e=>e.id===id) || (S.showEpisodesAll||[]).find(e=>e.id===id);
+  if(!ep)return;
+  const show=(S.shows||[]).find(s=>s.id===ep.showId);
+  addToPlaylist({type:'episode',showTitle:show?show.title:getCurrentShowTitle(),episodeTitle:ep.title});
 }
 
 // Share an entire show as a card into global chat
@@ -1578,29 +1873,42 @@ function saveShowForm(){
   const data={id,title,description,coverType:wcalCoverType,coverUrl,colorHex,order,
     isDefault:makeDefault,createdAt:isNew?Date.now():(existing?existing.createdAt:Date.now()),
     owner, isPublic};
-  try{
-    if(makeDefault){
-      const prevDefault=(S.shows||[]).find(s=>s.isDefault&&s.id!==id);
-      if(prevDefault)fbSaveShow(prevDefault.id,{isDefault:false},true);
+  const finishSave=async()=>{
+    // v01.34: permanent shortId for the wireless deep-link system —
+    // allocated once, at creation, never touched again regardless of
+    // title/owner/visibility changes later.
+    if(isNew){
+      try{
+        const shortId=await allocateShortId(SHOW_ID_REGISTRY);
+        claimShortId(SHOW_ID_REGISTRY,shortId,{internalId:id,owner});
+        data.shortId=shortId;
+      }catch(e){ console.warn('show shortId allocation failed:',e.message); }
     }
-    if(S.account && !S.adminUnlocked){
-      // Route through account-update for non-admin users (enforces ownership server-side)
-      callAccountUpdate({action:'saveUserShow',username:S.account.username,token:S.account.token,show:data}).then(res=>{
-        if(!res.ok){toast(res.error||"couldn't save");return;}
-        toast(isNew?'playlist created':'playlist updated');
-        closeShowForm();
-        if(isNew)setTimeout(()=>openShow(id),300);
-      });
-      return;
+    try{
+      if(makeDefault){
+        const prevDefault=(S.shows||[]).find(s=>s.isDefault&&s.id!==id);
+        if(prevDefault)fbSaveShow(prevDefault.id,{isDefault:false},true);
+      }
+      if(S.account && !S.adminUnlocked){
+        // Route through account-update for non-admin users (enforces ownership server-side)
+        callAccountUpdate({action:'saveUserShow',username:S.account.username,token:S.account.token,show:data}).then(res=>{
+          if(!res.ok){toast(res.error||"couldn't save");return;}
+          toast(isNew?'playlist created':'playlist updated');
+          closeShowForm();
+          if(isNew)setTimeout(()=>openShow(id),300);
+        });
+        return;
+      }
+      fbSaveShow(id,data);
+      toast(isNew?'show created':'show updated');
+      closeShowForm();
+      if(isNew)setTimeout(()=>openShow(id),300);
+    }catch(e){
+      console.error('save show error:',e);
+      toast("couldn't save the show");
     }
-    fbSaveShow(id,data);
-    toast(isNew?'show created':'show updated');
-    closeShowForm();
-    if(isNew)setTimeout(()=>openShow(id),300);
-  }catch(e){
-    console.error('save show error:',e);
-    toast("couldn't save the show");
-  }
+  };
+  finishSave();
 }
 
 // ── delete show ──
@@ -1804,13 +2112,13 @@ function renderEpisodes(){
       :'';
 
     const userBtns=isUser&&!isOwner
-      ?`<button class="playlist-add-btn" onclick="event.stopPropagation();addToPlaylist({type:'episode',showTitle:${JSON.stringify(getCurrentShowTitle())},episodeTitle:${JSON.stringify(ep.title)}})" title="save to playlist" style="margin-left:6px">+</button>
-        <button class="playlist-add-btn" onclick="event.stopPropagation();shareEpisodeToChat(${JSON.stringify(ep)})" title="share to chat" style="margin-left:4px;font-size:.65rem">📎</button>`
+      ?`<button class="playlist-add-btn" onclick="event.stopPropagation();addEpisodeToPlaylistById('${ep.id}')" title="save to playlist" style="margin-left:6px">+</button>
+        <button class="playlist-add-btn" onclick="event.stopPropagation();shareEpisodeToChatById('${ep.id}')" title="share to chat" style="margin-left:4px;font-size:.65rem">📎</button>`
       : (isOwner&&isUser
-        ?`<button class="playlist-add-btn" onclick="event.stopPropagation();shareEpisodeToChat(${JSON.stringify(ep)})" title="share to chat" style="margin-left:4px;font-size:.65rem">📎</button>`
+        ?`<button class="playlist-add-btn" onclick="event.stopPropagation();shareEpisodeToChatById('${ep.id}')" title="share to chat" style="margin-left:4px;font-size:.65rem">📎</button>`
         :'');
 
-    return `<div class="wp-ep-item${isPlaying?' playing':''}" onclick="loadEpisode(${JSON.stringify(ep)})">
+    return `<div class="wp-ep-item${isPlaying?' playing':''}" onclick="loadEpisodeById('${ep.id}')">
       ${selectBox}
       <div class="wp-ep-play-icon">${isPlaying?'🔊':'▶'}</div>
       <div style="flex:1;min-width:0">

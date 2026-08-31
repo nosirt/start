@@ -20,7 +20,18 @@ let _audioGainNode = null;
 let _audioSourceNode = null;
 
 function _ensureAudioGainRoute(audioEl) {
-  if (_audioGainNode) return; // already set up
+  if (_audioGainNode) {
+    // v01.32: already set up, but the browser can silently suspend an
+    // AudioContext (tab backgrounded, screen locked, etc.) — once that
+    // happens every track routed through it plays with zero sound even
+    // though .play() succeeds and the UI updates normally. Resuming here
+    // (a real user gesture, since this runs from a click handler) is
+    // what actually brings sound back on the next track switch.
+    if (_audioCtxForGain && _audioCtxForGain.state === 'suspended') {
+      _audioCtxForGain.resume().catch(()=>{});
+    }
+    return;
+  }
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -32,11 +43,21 @@ function _ensureAudioGainRoute(audioEl) {
     _audioGainNode.connect(_audioCtxForGain.destination);
     // Set gain to match current user preference
     _audioGainNode.gain.value = Math.max(0, Math.min(1.6, musicVolumeMultiplier()));
+    if (_audioCtxForGain.state === 'suspended') _audioCtxForGain.resume().catch(()=>{});
   } catch(e) {
     // If it fails (e.g. no AudioContext support), fall back gracefully
     _audioCtxForGain = null; _audioGainNode = null; _audioSourceNode = null;
   }
 }
+
+// v01.32: also try to resume on every tab-visibility change — covers the
+// case where the suspend happens mid-playback (not just between track
+// switches) and the user comes back without touching the sounds modal.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && _audioCtxForGain && _audioCtxForGain.state === 'suspended') {
+    _audioCtxForGain.resume().catch(()=>{});
+  }
+});
 
 // ── First-visit fade-in ──
 // Ramps from silence to the user's saved volume over 5 seconds.
@@ -196,30 +217,17 @@ function toggleMusic(key) {
       closeMusicModal(); return;
     }
     stopAmbientMusic();
-    activeMusic = 'podcast';
     document.querySelectorAll('.music-opt').forEach(o => o.classList.remove('playing'));
     const el = document.querySelector('.music-opt[data-key="podcast"]');
     if (el) el.classList.add('playing');
-    // v01.31: this used to do nothing but change a label if no episode
-    // had ever been loaded this session — tapping "The Wireless" looked
-    // like it worked (icon highlighted) but nothing actually played.
-    if (typeof currentEpisode !== 'undefined' && currentEpisode && ytPlayer) {
-      // already loaded this session (maybe paused/ambient took over) — resume it
-      ytPlayer.playVideo(); updateNP('🎙 ' + currentEpisode.title);
-      closeMusicModal();
-    } else if (typeof pickDefaultEpisode === 'function' && pickDefaultEpisode()) {
-      // nothing loaded yet this session, but there's a last-played/oldest
-      // episode to resume — load & start it right here, in the background,
-      // no page redirect (matches the original "background playback" intent)
-      updateNP('🎙 The Wireless');
-      closeMusicModal();
-      loadDefaultEpisode();
-    } else {
-      // truly nothing to play (no shows/episodes at all yet) — send them
-      // to the wireless page to pick something
-      closeMusicModal();
-      if (typeof navigateTo === 'function') navigateTo('wireless');
-    }
+    // v01.32: this is now the ONLY place that decides how to start/resume
+    // the podcast — same function the mini-player and (indirectly) Pixie
+    // use, via startOrResumePodcast() in wireless.js. Previously this had
+    // its own separate copy of the resume/pick-default/navigate logic,
+    // which is exactly how the "podcast" quick-play button ended up
+    // behaving differently from opening a show on the wireless page.
+    closeMusicModal();
+    if (typeof startOrResumePodcast === 'function') startOrResumePodcast();
     if (typeof updateMiniPlayerUI === 'function') updateMiniPlayerUI();
     return;
   }

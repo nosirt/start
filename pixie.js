@@ -465,12 +465,14 @@ window.pixieOnAdminLogin = function(){
   // Switch to dev history store, reset AI context, re-render thread
   pixieDevMode = false; // start in character mode even when admin
   pixieAiHistory = [];
+  pixieAdminDirective = null;
   if(typeof rerenderPixieDmThread === 'function') rerenderPixieDmThread();
 };
 window.pixieOnAdminLogout = function(){
   // Return to regular mode and regular history
   pixieDevMode = false;
   pixieAiHistory = [];
+  pixieAdminDirective = null;
   if(typeof rerenderPixieDmThread === 'function') rerenderPixieDmThread();
 };
 // Renders a past message without re-saving it (used only to replay
@@ -585,6 +587,18 @@ async function sendPixieMessage(){
       addPixieMessage('pixie', '[ back in character. sigh. ]');
       return;
     }
+    // v01.32: any other (...) message sets/replaces the standing admin
+    // directive rather than being sent as a normal chat turn — the very
+    // next real message will already carry it. Whatever's inside the
+    // parens is used verbatim, unedited, as free-form instruction text.
+    const directiveMatch = /^\(([\s\S]+)\)$/.exec(text.trim());
+    if(directiveMatch){
+      pixieAdminDirective = directiveMatch[1].trim();
+      addPixieMessage('pixie', pixieAdminDirective
+        ? `[ directive set: "${pixieAdminDirective}" ]`
+        : '[ directive cleared ]');
+      return;
+    }
   }
 
   // ── Name capture — always goes through AI for smart validation ──
@@ -622,6 +636,7 @@ async function sendPixieMessage(){
           history: pixieAiHistory.slice(0, -1),
           isAdmin: !!(typeof S !== 'undefined' && S.adminUnlocked),
           isDevMode: pixieDevMode,
+          adminDirective: pixieAdminDirective || null,
           isNamingCheck: true,
           siteContext: buildPixieSiteContext()
         })
@@ -874,6 +889,16 @@ let pixieAiHistory = []; // [{role:'user'|'model', text:string}]
 let pixieDevMode = false;
 const PIXIE_DEV_HISTORY_KEY = 'n_pixie_dev_history'; // sessionStorage
 const PIXIE_HISTORY_KEY_REGULAR = 'n_pixie_chat_history'; // localStorage
+
+// v01.32: admin custom directive — ANY (...) message sent while admin
+// is unlocked becomes a standing instruction, included with every AI
+// call (with top priority over the Pixie persona) until replaced by
+// another (...) message. Nothing about the wording is hardcoded — the
+// text inside the parens is passed straight through as free-form
+// instruction text; the model itself interprets it (so "(get out of
+// character)" and "(be in character)" both just work as plain English,
+// same as any other instruction the admin might type).
+let pixieAdminDirective = null;
 
 // v01.27: Pixie tone memory — persists within a session
 let pixieRudeCount = 0;
@@ -1297,6 +1322,7 @@ async function sendPixieAiMessage(userText) {
         history: pixieAiHistory.slice(0, -1),
         isAdmin: !!(typeof S !== 'undefined' && S.adminUnlocked),
         isDevMode: pixieDevMode,
+        adminDirective: pixieAdminDirective || null,
         siteContext: buildPixieSiteContext()
       })
     });
@@ -1405,6 +1431,19 @@ function initPixie(){
   // Click opens Pixie's DM thread (openPixieDmThread is defined above)
   // The onclick is also set directly in HTML as a fallback.
 
+  // v01.32: the floating icon couldn't be tapped to open chat on any
+  // touch device. Root cause — same double-binding pattern found (and
+  // fixed) in the wireless player controls: pointerdown/pointerup AND
+  // touchstart/touchend were both bound for the same physical tap. On
+  // touch devices, pointerup fires BEFORE touchend for the same tap —
+  // the document-level pointerup handler ran first, set pixieDragging
+  // to false, and by the time touchend ran its own `if(!pixieDragging)
+  // return;` guard a moment later, it immediately bailed out before
+  // ever reaching the `openPixieDmThread()` call. Pointer Events alone
+  // already cover touch/mouse/pen on every modern browser (including
+  // iOS Safari), so the touch listeners were pure duplication — removed
+  // them, and moved the tap-to-open check into pointerup where it will
+  // now actually run.
   let startX=0,startY=0;
   icon.addEventListener('pointerdown',(e)=>{
     pixieDragging=true;pixieMoved=false;
@@ -1413,35 +1452,6 @@ function initPixie(){
     startX=e.clientX-rect.left;startY=e.clientY-rect.top;
     icon.style.transition='none';
     try{ icon.setPointerCapture && icon.setPointerCapture(e.pointerId); }catch(err){}
-    e.preventDefault();
-    e.stopPropagation();
-  },{passive:false});
-  // Touch fallback for iOS where pointer events may not fire on fixed elements over canvas
-  icon.addEventListener('touchstart',(e)=>{
-    if(e.touches.length!==1)return;
-    pixieDragging=true;pixieMoved=false;
-    clearTimeout(pixieWanderTimer);
-    const rect=icon.getBoundingClientRect();
-    startX=e.touches[0].clientX-rect.left;startY=e.touches[0].clientY-rect.top;
-    icon.style.transition='none';
-    e.preventDefault();
-    e.stopPropagation(); // prevent Hammer.js on map-viewport from consuming this
-  },{passive:false});
-  icon.addEventListener('touchmove',(e)=>{
-    if(!pixieDragging||e.touches.length!==1)return;
-    pixieMoved=true;
-    const x=Math.max(4,Math.min(e.touches[0].clientX-startX,window.innerWidth-46));
-    const y=Math.max(4,Math.min(e.touches[0].clientY-startY,window.innerHeight-46));
-    icon.style.left=x+'px';icon.style.top=y+'px';
-    e.preventDefault();
-  },{passive:false});
-  icon.addEventListener('touchend',(e)=>{
-    if(!pixieDragging)return;
-    pixieDragging=false;
-    icon.style.transition='left 3s ease-in-out, top 3s ease-in-out, opacity 1.2s ease';
-    if(!pixieMoved) openPixieDmThread(); // tap without drag = open chat
-    setTimeout(()=>{ pixieMoved=false; },50);
-    scheduleNextPixieWander(2000+Math.random()*3000);
     e.preventDefault();
     e.stopPropagation();
   },{passive:false});
@@ -1456,6 +1466,7 @@ function initPixie(){
     if(!pixieDragging)return;
     pixieDragging=false;
     icon.style.transition='left 3s ease-in-out, top 3s ease-in-out, opacity 1.2s ease';
+    if(!pixieMoved) openPixieDmThread(); // tap without drag = open chat
     setTimeout(()=>{ pixieMoved=false; },50);
     scheduleNextPixieWander(2000+Math.random()*3000);
   });
