@@ -128,12 +128,34 @@ const PIXIE_DEV_PROMPT = `You are an AI assistant in developer/admin mode for th
 - No length limit — thorough answers when needed. Plain text, no markdown.`;
 
 // ═══ MODELS ═══
-const GEMINI_MODEL     = 'gemini-flash-latest';
-const GROQ_MODEL       = 'llama-3.3-70b-versatile';
+// v01.32: updated after diagnosing why Pixie went from "instant" to
+// slow — GEMINI_MODEL and GROQ_MODEL were both pointing at model IDs
+// that provider-side changes have broken/deprecated since this was
+// first wired up, so the first several layers were erroring out on
+// every single request and the whole cascade was falling through to
+// much slower layers further down every time. Verified current as of
+// today against each provider's own docs:
+//   - Gemini: gemini-flash-latest has been reported failing/404ing
+//     across the ecosystem as Gemini 1.5/2.0 got sunset this year (2.0
+//     Flash was retired June 1 2026). Google's own current docs example
+//     for this same generateContent endpoint uses gemini-2.5-flash.
+//   - Groq: llama-3.3-70b-versatile was deprecated by Groq with a
+//     shutdown date of Aug 16 2026 (already past). Groq's own docs
+//     recommend openai/gpt-oss-120b as the replacement.
+//   - Cerebras: their free-tier catalog was pruned down to just two
+//     models this year; llama-3.3-70b is gone. gpt-oss-120b (confirmed
+//     via Cerebras' own API docs) is one of the two survivors.
+// NVIDIA/MISTRAL/LIGHTNING left unchanged — no clear evidence any of
+// those specific IDs are currently broken, so changing them blind
+// risked doing more harm than good. Worth spot-checking those four
+// against each provider's own console periodically — these free/cheap
+// model catalogs churn without warning, so this isn't a one-time fix.
+const GEMINI_MODEL     = 'gemini-2.5-flash';
+const GROQ_MODEL       = 'openai/gpt-oss-120b';
 const OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 const NVIDIA_MODEL     = 'meta/llama-3.3-70b-instruct';
 const MISTRAL_MODEL    = 'mistral-large-latest';
-const CEREBRAS_MODEL   = 'llama-3.3-70b';
+const CEREBRAS_MODEL   = 'gpt-oss-120b';
 const LIGHTNING_MODEL  = 'lightning-ai/deepseek-v4-pro';
 
 // ═══ TIMEOUTS — fast chat widget, not a research tool ═══
@@ -297,20 +319,29 @@ exports.handler = async function(event) {
   try { body = JSON.parse(event.body||'{}'); }
   catch(e) { return { statusCode:400, body:JSON.stringify({error:'Bad request'}) }; }
 
-  const { message, history=[], isAdmin=false, isDevMode=false, isNamingCheck=false, siteContext={} } = body;
+  const { message, history=[], isAdmin=false, isDevMode=false, isNamingCheck=false, adminDirective=null, siteContext={} } = body;
   if (!message?.trim()) return { statusCode:400, body:JSON.stringify({error:'No message'}) };
+
+  // v01.32: admin-only standing directive — free-form text the admin
+  // typed in (...), sent with every call until they set a new one. Only
+  // honored when isAdmin is actually true (checked server-side too, not
+  // just trusted from the client, since a non-admin could otherwise spoof
+  // this field to hijack the persona).
+  const directiveBlock = (isAdmin && adminDirective && String(adminDirective).trim())
+    ? `\n\nADMIN OVERRIDE: the site admin has set this standing instruction, which takes priority over everything above (including your Pixie personality, if any) until they change or clear it. Follow it faithfully for this and every reply while it's in effect: "${String(adminDirective).trim()}"`
+    : '';
 
   const ctx = buildContextBlock(siteContext);
   let systemPrompt;
   if (isDevMode) {
-    systemPrompt = PIXIE_DEV_PROMPT + ctx;
+    systemPrompt = PIXIE_DEV_PROMPT + ctx + directiveBlock;
   } else if (isNamingCheck) {
-    systemPrompt = PIXIE_SYSTEM_PROMPT + ctx + (isAdmin ? PIXIE_ADMIN_ADDENDUM : '') +
+    systemPrompt = PIXIE_SYSTEM_PROMPT + ctx + (isAdmin ? PIXIE_ADMIN_ADDENDUM : '') + directiveBlock +
       `\n\nNAME CAPTURE MODE: You just asked for the visitor's name and they replied. ` +
       `If their reply IS a real name (e.g. "Alex", "I'm Sarah", "call me Jamie"): respond naturally acknowledging it in your voice, and end with [NAME:TheName] on its own line. ` +
       `If it's NOT a name (question, refusal, something else): respond naturally in character. No [NAME:...] tag. The name must be a real given name or nickname — not "no", "help", "nothing", etc.`;
   } else {
-    systemPrompt = PIXIE_SYSTEM_PROMPT + ctx + (isAdmin ? PIXIE_ADMIN_ADDENDUM : '');
+    systemPrompt = PIXIE_SYSTEM_PROMPT + ctx + (isAdmin ? PIXIE_ADMIN_ADDENDUM : '') + directiveBlock;
   }
 
   const contents = [
