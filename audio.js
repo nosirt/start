@@ -19,7 +19,7 @@ let _audioCtxForGain = null;
 let _audioGainNode = null;
 let _audioSourceNode = null;
 
-function _ensureAudioGainRoute(audioEl) {
+async function _ensureAudioGainRoute(audioEl) {
   if (_audioGainNode) {
     // v01.32: already set up, but the browser can silently suspend an
     // AudioContext (tab backgrounded, screen locked, etc.) — once that
@@ -27,8 +27,11 @@ function _ensureAudioGainRoute(audioEl) {
     // though .play() succeeds and the UI updates normally. Resuming here
     // (a real user gesture, since this runs from a click handler) is
     // what actually brings sound back on the next track switch.
+    // v01.35: now actually awaited (was fire-and-forget before) so
+    // callers can't proceed and set gain values while the context is
+    // still mid-transition from suspended to running.
     if (_audioCtxForGain && _audioCtxForGain.state === 'suspended') {
-      _audioCtxForGain.resume().catch(()=>{});
+      try{ await _audioCtxForGain.resume(); }catch(e){}
     }
     return;
   }
@@ -43,7 +46,7 @@ function _ensureAudioGainRoute(audioEl) {
     _audioGainNode.connect(_audioCtxForGain.destination);
     // Set gain to match current user preference
     _audioGainNode.gain.value = Math.max(0, Math.min(1.6, musicVolumeMultiplier()));
-    if (_audioCtxForGain.state === 'suspended') _audioCtxForGain.resume().catch(()=>{});
+    if (_audioCtxForGain.state === 'suspended') { try{ await _audioCtxForGain.resume(); }catch(e){} }
   } catch(e) {
     // If it fails (e.g. no AudioContext support), fall back gracefully
     _audioCtxForGain = null; _audioGainNode = null; _audioSourceNode = null;
@@ -96,8 +99,8 @@ function tryPlay(src, name) {
     if (activeMusic === 'podcast' || a.src !== src || !a.getAttribute('src')) return;
     updateNP('stream failed · try built-in ancient'); toast('that stream would not open here');
   };
-  a.play().then(() => {
-    _ensureAudioGainRoute(a);
+  a.play().then(async () => {
+    await _ensureAudioGainRoute(a);
     if (!_audioFadeInDone) {
       // First ever play — ramp up from silence
       _doFirstVisitFadeIn(a);

@@ -53,7 +53,7 @@ button{touch-action:manipulation}
 .music-now span{color:var(--amber);font-style:normal;}
 .music-btn{background:rgba(200,137,42,.12);border:1px solid rgba(200,137,42,.25);border-radius:20px;
   padding:6px 13px;color:var(--cream);font-family:'IM Fell English',serif;font-style:italic;
-  font-size:.74rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
+  font-size:.74rem;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;}
 .music-btn:hover{background:rgba(200,137,42,.28);}
 
 /* v01.31: Spotify-style mini-player, sits in the top music-bar so
@@ -757,12 +757,23 @@ button{touch-action:manipulation}
 
 /* ─── WAVE MODE ─── */
 .wp-stage.mode-wave{height:148px;}
-.wp-stage.mode-wave .wp-yt-wrap{opacity:0;pointer-events:none;position:absolute;width:1px;height:1px;overflow:hidden;}
+/* v01.35: THE core reason the podcast never actually played — YouTube's
+   own docs require an embedded player's viewport to be at least 200x200px
+   ("Embedded players must have a viewport that is at least 200px by
+   200px"). This was shrinking the iframe to literally 1x1px to hide it
+   in wave/podcast mode, which is below YouTube's documented minimum —
+   the player can fail to properly initialize/play at that size (and can
+   silently fail to load required ad breaks, per YouTube's own API team).
+   Fixed by keeping the iframe's own box at a real 210x210px — opacity:0
+   plus the ancestor .wp-stage's overflow:hidden still keeps it fully
+   invisible and non-interactive, this only changes what YOUTUBE sees as
+   the player's actual dimensions, not what the user sees. */
+.wp-stage.mode-wave .wp-yt-wrap{opacity:0;pointer-events:none;position:absolute;width:210px;height:210px;overflow:hidden;}
 .wp-stage.mode-wave .wp-art-tile{left:14px;top:14px;width:76px;height:76px;}
 .wp-stage.mode-wave .wp-video-controls{display:none !important;}
 .wp-stage.mode-wave .wp-controls{
   position:absolute;left:104px;right:14px;top:0;bottom:0;
-  background:none;padding:0;display:flex;flex-direction:column;justify-content:center;gap:8px;
+  background:none;padding:0;display:flex;flex-direction:column;justify-content:center;gap:6px;
   opacity:1;transform:none;pointer-events:auto;}
 .wp-stage.mode-wave .wp-center-play{display:none !important;}
 .wp-stage.mode-wave .wp-volume-row{display:flex;}
@@ -1116,7 +1127,7 @@ button{touch-action:manipulation}
   }
 
   .wp-stage.mode-wave {
-    height: 112px;
+    height: 128px;
   }
   .wp-stage.mode-wave .wp-art-tile {
     width: 56px; height: 56px;
@@ -1125,9 +1136,10 @@ button{touch-action:manipulation}
   .wp-stage.mode-wave .wp-controls {
     left: 78px;
     right: 10px;
+    gap: 5px;
   }
   .wp-stage.mode-wave .wp-now-title {
-    font-size: .72rem;
+    font-size: .7rem;
   }
   .wp-stage.mode-wave .wp-btn-row {
     gap: 12px;
