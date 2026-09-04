@@ -7,6 +7,23 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.35',
+    date: '9/2026',
+    changes: [
+      'NEW: Sandbox — a new 6th section (own bottom-nav tab, /sandbox) where anyone can bring code from an AI or elsewhere and run it, with no account required. Deliberately its own cooler, IDE/workshop visual language rather than the site\'s warm amber/serif theme, kept fully scoped so it can\'t leak into (or be leaked into by) the rest of the site',
+      'Workshop: paste plain HTML/JS/CSS, upload multiple files, upload a ZIP, or drag-and-drop a whole project — no special Nosirt API required in the code itself. A live compatibility report explains what was detected (canvas, network calls, external scripts, modules) before running it',
+      'App Store: every published creation, browsable and playable by anyone, account or not. Saving one to your own space requires an account',
+      'My Space: an account\'s own drafts plus anything added from the App Store. Added items are references to the original creation, not copies — if the creator publishes an update, everyone who has it "installed" automatically gets the new version next time they open it, the same linked-not-copied model the wireless system already uses for shows',
+      'Fixed a real bug found in the adapter prototype: the injected runtime bridge had a bare try{} with no catch, which is invalid JS — since that string gets written into every adapted creation\'s <script> tag, every single creation would have hit a syntax error the instant it tried to load. Every creation also now gets its own top-level try/catch, so one bug in someone\'s pasted code shows a visible error instead of a blank white iframe',
+      'Security: every creation runs in an iframe with sandbox="allow-scripts" and deliberately NO allow-same-origin — that combination is what actually keeps arbitrary code from touching Nosirt accounts, cookies, or data, regardless of what the code itself tries to do. Nothing about this changes going forward without very deliberate reconsideration',
+      'Images/audio uploaded as part of a creation are uploaded to Firebase Storage (previously configured on this project but never actually used anywhere) when saved or published — the adapter\'s ephemeral blob-URL approach only ever worked for a live unsaved preview, since blob URLs die on reload and can\'t be shared',
+      'Reused the exact permanent-id allocation system built for wireless deep links (allocateShortId/claimShortId, unchanged) for Sandbox creations — same never-reused 5-digit id guarantee',
+      'New account-update.js actions: saveSandboxCreation, publishSandboxCreation, unpublishSandboxCreation, deleteSandboxCreation, setSandboxWorld — same ownership-verified pattern as the existing show/episode actions. Added sandboxWorld to the account record end-to-end (server responses + client S.account construction) — this field did not exist anywhere before this update',
+      'NOTE for deployment: Firestore security rules need to allow public read on nosirt_sandbox_creations (the App Store depends on this) and Storage rules need to allow writes under sandbox_assets/. Also worth knowing: like the rest of this app\'s existing account system (no Firebase Auth, just server-verified tokens), private creation visibility is enforced client-side, consistent with how private wireless shows already work — not a new limitation, but worth being aware of',
+      'Version bumped to 01.35'
+    ]
+  },
+  {
     version: '01.34',
     date: '8/2026',
     changes: [

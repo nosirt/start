@@ -56,7 +56,7 @@ async function initAccounts(){
     S.account = {
       username: res.username, displayName: res.displayName,
       token: res.token, avatarEmoji: res.avatarEmoji, playlist: res.playlist || [],
-      savedItems: res.savedItems || []
+      savedItems: res.savedItems || [], sandboxWorld: res.sandboxWorld || []
     };
   } else {
     // Token no longer matches server-side (rare — e.g. data was reset).
@@ -127,7 +127,7 @@ async function handleSignInOrUp(){
   S.account = {
     username: res.username, displayName: res.displayName,
     token: res.token, avatarEmoji: res.avatarEmoji, playlist: res.playlist || [],
-    savedItems: res.savedItems || []
+    savedItems: res.savedItems || [], sandboxWorld: res.sandboxWorld || []
   };
   input.value = '';
   renderAccountPanel();

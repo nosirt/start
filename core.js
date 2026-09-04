@@ -7,7 +7,7 @@
 
 // ═══ VERSION HISTORY ═══
 // Current release number. Full changelog lives in version-history.js.
-const CURRENT_VERSION = '01.34';
+const CURRENT_VERSION = '01.35';
 
 // ═══ FIREBASE ═══
 const firebaseConfig = {
@@ -111,6 +111,30 @@ function fbListenShowEpisodes(cb) {
       snap.forEach(doc=>items.push(doc.data()));
       cb(items);
     });
+  } catch(e) { return null; }
+}
+
+// v01.35: Sandbox — only public creations are synced client-side (via
+// the where() filter), not everyone's private drafts. Full creation
+// docs (including code) are fetched on-demand by id when someone
+// actually opens/plays one — see sandbox.js — rather than kept in this
+// listener, since code payloads are the one thing in this app actually
+// worth not blindly syncing to every visitor's browser at once.
+function fbListenPublicSandboxCreations(cb) {
+  if (!db) return null;
+  try {
+    return db.collection('nosirt_sandbox_creations').where('isPublic','==',true).onSnapshot(snap => {
+      const items=[];
+      snap.forEach(doc=>items.push(doc.data()));
+      cb(items);
+    });
+  } catch(e) { return null; }
+}
+async function fbGetSandboxCreation(id) {
+  if (!db) return null;
+  try {
+    const doc = await db.collection('nosirt_sandbox_creations').doc(id).get();
+    return doc.exists ? doc.data() : null;
   } catch(e) { return null; }
 }
 function fbSaveComment(id, data) {

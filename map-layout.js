@@ -432,7 +432,7 @@ function bindPointerMap(vp){
 //                  backwards compatibility with existing code)
 //   /wireless    → the wireless
 //   /keep        → nosirt's keep (password gate)
-const ROUTE_TO_PAGE={garden:'garden',square:'square',tower:'forum',wireless:'wireless'};
+const ROUTE_TO_PAGE={garden:'garden',square:'square',tower:'forum',wireless:'wireless',sandbox:'sandbox'};
 
 function currentRoutePath(){
   return location.pathname.replace(/^\/|\/$/g,'').toLowerCase();
@@ -646,6 +646,9 @@ function showPage(page){
     if(typeof ensureWirelessEpisodesListener==='function')ensureWirelessEpisodesListener();
     if(S.currentShowId&&typeof renderEpisodes==='function')renderEpisodes();
     else if(typeof renderShowGrid==='function')renderShowGrid();
+  }
+  if(page==='sandbox'){
+    if(!S.sandboxInited && typeof initSandboxPage==='function'){ S.sandboxInited=true; initSandboxPage(); }
   }
 }
 
