@@ -164,6 +164,89 @@ exports.handler = async function (event) {
       return { statusCode: 200, body: JSON.stringify({ ok: true, isPublic: !!isPublic }) };
     }
 
+    // v01.35: Sandbox — user-created code/programs. Same ownership
+    // pattern as shows: owner=username, isPublic flag, only the owner
+    // (checked server-side, not just trusted from the client) can
+    // write to their own creation. shortId is allocated client-side
+    // (reuses the same allocateShortId()/registry pattern wireless.js
+    // already uses) before this is ever called — this just persists
+    // whatever fields were sent, the same way saveUserShow does.
+    const MAX_SANDBOX_CODE_BYTES = 350000; // ~350KB of code+files text — generous for hand/AI-written HTML/JS/CSS, well under Firestore's 1MB doc cap once metadata is added
+    if (action === 'saveSandboxCreation') {
+      const creation = body.creation;
+      if (!creation || !creation.id || !creation.title) {
+        return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Invalid creation data.' }) };
+      }
+      const codeSize = Buffer.byteLength(JSON.stringify(creation.code || '') + JSON.stringify(creation.files || []), 'utf8');
+      if (codeSize > MAX_SANDBOX_CODE_BYTES) {
+        return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'That creation is too large to save (350KB text limit). Large images/audio should be uploaded as assets, not pasted as text.' }) };
+      }
+      const ref = db.collection('nosirt_sandbox_creations').doc(creation.id);
+      const existing = await ref.get();
+      if (existing.exists && existing.data().owner !== username) {
+        return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Not your creation.' }) };
+      }
+      const data = {
+        ...creation,
+        owner: username,
+        isPublic: existing.exists ? !!existing.data().isPublic : false, // publishing is a separate explicit action
+        version: existing.exists ? (existing.data().version || 1) : 1,
+        createdAt: existing.exists ? existing.data().createdAt : Date.now(),
+        updatedAt: Date.now()
+      };
+      await ref.set(data, { merge: false });
+      return { statusCode: 200, body: JSON.stringify({ ok: true, creation: data }) };
+    }
+
+    if (action === 'publishSandboxCreation') {
+      const { creationId } = body;
+      if (!creationId) return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Missing creationId.' }) };
+      const ref = db.collection('nosirt_sandbox_creations').doc(creationId);
+      const existing = await ref.get();
+      if (!existing.exists || existing.data().owner !== username) {
+        return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Not your creation.' }) };
+      }
+      const cur = existing.data();
+      const version = (cur.version || 1) + (cur.isPublic ? 1 : 0); // first publish stays v1; re-publishing an update bumps it
+      await ref.update({ isPublic: true, version, updatedAt: Date.now() });
+      return { statusCode: 200, body: JSON.stringify({ ok: true, version }) };
+    }
+
+    if (action === 'unpublishSandboxCreation') {
+      const { creationId } = body;
+      const ref = db.collection('nosirt_sandbox_creations').doc(creationId);
+      const existing = await ref.get();
+      if (!existing.exists || existing.data().owner !== username) {
+        return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Not your creation.' }) };
+      }
+      await ref.update({ isPublic: false, updatedAt: Date.now() });
+      return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === 'deleteSandboxCreation') {
+      const { creationId } = body;
+      if (!creationId) return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Missing creationId.' }) };
+      const ref = db.collection('nosirt_sandbox_creations').doc(creationId);
+      const existing = await ref.get();
+      if (!existing.exists || existing.data().owner !== username) {
+        return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Not your creation.' }) };
+      }
+      await ref.delete();
+      return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === 'setSandboxWorld') {
+      // Mirrors setPlaylist exactly — a simple array field on the
+      // account's own doc. World entries are references (creationId +
+      // addedAt), never a copy of the code, so an update to the
+      // original creation is automatically what everyone with it
+      // "installed" sees next time they open it.
+      const MAX_WORLD_ITEMS = 300;
+      const world = Array.isArray(body.world) ? body.world.slice(0, MAX_WORLD_ITEMS) : [];
+      await userRef.update({ sandboxWorld: world });
+      return { statusCode: 200, body: JSON.stringify({ ok: true, world }) };
+    }
+
     if (action === 'saveUserEpisode') {
       const ep = body.episode;
       if (!ep || !ep.id || !ep.showId) {

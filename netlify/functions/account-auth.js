@@ -112,7 +112,7 @@ exports.handler = async function (event) {
       body: JSON.stringify({
         ok: true, token: nosirtToken, username: 'nosirt',
         displayName: d.displayName || 'nosirt', avatarEmoji: d.avatarEmoji || '🏰',
-        playlist: d.playlist || [], savedItems: d.savedItems || [],
+        playlist: d.playlist || [], savedItems: d.savedItems || [], sandboxWorld: d.sandboxWorld || [],
         isAdminAccount: true
       })
     };
@@ -146,12 +146,13 @@ exports.handler = async function (event) {
         avatarEmoji: '🙂',
         playlist: [],
         savedItems: [], // v01.24 sharing slice: bookmarked recs/posts shared by others (playlist shares go straight into playlist instead, since those are directly playable)
+        sandboxWorld: [], // v01.35: creations added from the Sandbox App Store — references, not copies
         createdAt: Date.now()
       };
       await userRef.set(userData);
       return {
         statusCode: 200,
-        body: JSON.stringify({ ok: true, token: newToken, username, displayName: userData.displayName, avatarEmoji: userData.avatarEmoji, playlist: [], savedItems: [] })
+        body: JSON.stringify({ ok: true, token: newToken, username, displayName: userData.displayName, avatarEmoji: userData.avatarEmoji, playlist: [], savedItems: [], sandboxWorld: [] })
       };
     }
 
@@ -172,7 +173,7 @@ exports.handler = async function (event) {
         body: JSON.stringify({
           ok: true, token: data.token, username: data.username,
           displayName: data.displayName, avatarEmoji: data.avatarEmoji || '🙂',
-          playlist: data.playlist || [], savedItems: data.savedItems || []
+          playlist: data.playlist || [], savedItems: data.savedItems || [], sandboxWorld: data.sandboxWorld || []
         })
       };
     }
