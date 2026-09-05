@@ -13,6 +13,27 @@
 //   CEREBRAS_API_KEY_7     layer 7
 //   LIGHTNING_API_KEY_8    layer 8
 // Override provider per layer: PIXIE_AI_PROVIDER_N=groq etc.
+//
+// v01.36: also serves Sandbox's "ask the AI for code" feature — same
+// providers/fallback chain, same API keys, different system prompt
+// (coding-only, no persona) and a Firestore-backed daily rate limit
+// (5/day per account or per IP, admin exempt). See handleSandboxCode()
+// near the bottom.
+
+const admin = require('firebase-admin');
+function initAdmin() {
+  if (admin.apps.length) return admin.app();
+  return admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+    })
+  });
+}
+function getDb() {
+  try { initAdmin(); return admin.firestore(); } catch(e) { return null; }
+}
 
 // ═══ PIXIE LORE ═══
 // She has a real backstory — guards it jealously. Users have to earn it
@@ -298,9 +319,108 @@ function buildContextBlock(ctx) {
   return L.join('\n');
 }
 
+// ═══ SANDBOX CODE-ONLY MODE ═══
+// v01.36: deliberately NOT Pixie — no persona, no character voice. Only
+// ever outputs code, or nothing. "hi" gets nothing back, not small talk.
+const SANDBOX_CODE_PROMPT = `You are a code generator embedded in a website called Nosirt, inside a feature called Sandbox where users paste or upload code (HTML/JS/CSS) that runs in an isolated iframe and can be saved/published.
+
+Your ONLY job: take the user's request and output the code for it. Nothing else.
+
+Rules, no exceptions:
+- Output ONLY code — no greetings, no explanations, no "here's your code", no summary after, no markdown fences (no \`\`\`).
+- If the request is not asking for code/a program/a game/a tool to be built (e.g. "hi", "how are you", a question about something unrelated), output NOTHING — return a completely empty response. Do not make small talk, do not ask clarifying questions, do not apologize.
+- Default to a single self-contained HTML document (inline <style> and <script> tags) unless the request clearly implies otherwise, since that's what pastes cleanest into Sandbox's "paste your code here" box.
+- Write real, working, complete code — not a stub, not pseudocode, not "// TODO: implement this part".
+- Do not include any commentary inside the code beyond brief inline comments if genuinely helpful for the user reading their own code later.
+- The code will run in a sandboxed iframe with no access to the website's accounts, cookies, or backend — don't reference Nosirt's own systems, don't try to call any Nosirt API, don't assume any special environment beyond plain HTML/CSS/JS in a browser.`;
+
+function buildSandboxCodePrompt(){
+  return SANDBOX_CODE_PROMPT;
+}
+
+// v01.36: 5 prompts/day, keyed by account username if signed in,
+// otherwise by IP — admin is exempt entirely. Firestore doc per
+// key+day, incremented on each use; resets naturally the next day
+// since the doc id includes the date.
+async function checkAndConsumeSandboxRateLimit(db, key, isAdmin){
+  if(isAdmin) return { ok:true, remaining:Infinity };
+  const DAILY_LIMIT = 5;
+  const day = new Date().toISOString().slice(0,10);
+  const docId = `${key}_${day}`.replace(/[^a-zA-Z0-9_.:@-]/g,'_').slice(0,300);
+  const ref = db.collection('nosirt_sandbox_ai_usage').doc(docId);
+  try{
+    const result = await db.runTransaction(async tx=>{
+      const snap = await tx.get(ref);
+      const used = snap.exists ? (snap.data().count||0) : 0;
+      if(used>=DAILY_LIMIT) return { allowed:false, used };
+      tx.set(ref, { count: used+1, day, key, updatedAt: Date.now() }, { merge:true });
+      return { allowed:true, used: used+1 };
+    });
+    return { ok: result.allowed, remaining: Math.max(0, DAILY_LIMIT-result.used) };
+  }catch(e){
+    // If Firestore is unreachable, fail OPEN rather than blocking the
+    // whole feature — a rate limit is a nice-to-have guard against
+    // spam, not a security boundary.
+    console.warn('sandbox rate limit check failed, allowing:', e.message);
+    return { ok:true, remaining:null };
+  }
+}
+
 // ═══ HANDLER ═══
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') return { statusCode:405, body:JSON.stringify({error:'Method not allowed'}) };
+
+  let body;
+  try { body = JSON.parse(event.body||'{}'); }
+  catch(e) { return { statusCode:400, body:JSON.stringify({error:'Bad request'}) }; }
+
+  // v01.36: Sandbox's "ask the AI for code" — short-circuits into its
+  // own path before any of Pixie's persona/context logic, since this
+  // shares only the provider fallback chain, nothing else.
+  if (body.mode === 'sandboxCode') {
+    const { prompt, isAdmin=false, username=null } = body;
+    if (!prompt?.trim()) return { statusCode:400, body:JSON.stringify({ok:false,error:'No prompt'}) };
+    const db = getDb();
+    const ip = event.headers['x-nf-client-connection-ip'] || (event.headers['x-forwarded-for']||'').split(',')[0].trim() || 'unknown';
+    const rateLimitKey = username ? `user:${username}` : `ip:${ip}`;
+    if (db) {
+      const rl = await checkAndConsumeSandboxRateLimit(db, rateLimitKey, isAdmin);
+      if (!rl.ok) return { statusCode:200, body:JSON.stringify({ ok:false, error:'daily limit reached — 5 prompts/day. Come back tomorrow.', remaining:0 }) };
+      var sandboxRemaining = rl.remaining;
+    } else { var sandboxRemaining = isAdmin ? null : 5; }
+
+    const providers = ['GEMINI','GROQ','OPENROUTER','NVIDIA','MISTRAL','CEREBRAS','LIGHTNING'];
+    const apiKeys = [];
+    for (let i=1; i<=10; i++) {
+      let key=null, detected='gemini';
+      for (const p of providers) {
+        const v = i===1&&p==='GEMINI' ? process.env.GEMINI_API_KEY : process.env[`${p}_API_KEY_${i}`];
+        if (v) { key=v; detected=p.toLowerCase(); break; }
+      }
+      if (key) { const ex=process.env[`PIXIE_AI_PROVIDER_${i}`]; apiKeys.push({index:i,key,provider:ex||detected}); }
+    }
+    if (!apiKeys.length) return { statusCode:200, body:JSON.stringify({ ok:false, error:'AI unavailable right now.' }) };
+
+    const reqBody = {
+      system_instruction: { parts:[{text:buildSandboxCodePrompt()}] },
+      contents: [{ role:'user', parts:[{text:prompt.trim()}] }],
+      // v01.36: "no token limit" per the request — maxOutputTokens is
+      // left unset (provider default, which is generous, typically
+      // several thousand tokens) rather than Pixie's tight 250-token
+      // chat cap, since real code can legitimately run long.
+      generationConfig: { temperature: 0.4, topP: 0.9 }
+    };
+    let result=null;
+    for (const {index,key,provider} of apiKeys) {
+      try {
+        result = await callAI(key, reqBody, provider);
+        if (result) break;
+      } catch(e) { console.warn(`sandboxCode provider ${provider} #${index} failed:`, e.message); }
+    }
+    if (!result) return { statusCode:200, body:JSON.stringify({ ok:false, error:"couldn't reach any AI provider right now." }) };
+    const code = String(result).replace(/^```[a-z]*\n?/i,'').replace(/```\s*$/,'').trim();
+    return { statusCode:200, body:JSON.stringify({ ok:true, code, remaining:sandboxRemaining }) };
+  }
 
   // Detect API keys
   const providers = ['GEMINI','GROQ','OPENROUTER','NVIDIA','MISTRAL','CEREBRAS','LIGHTNING'];
@@ -314,10 +434,6 @@ exports.handler = async function(event) {
     if (key) { const ex=process.env[`PIXIE_AI_PROVIDER_${i}`]; apiKeys.push({index:i,key,provider:ex||detected}); }
   }
   if (!apiKeys.length) return { statusCode:200, body:JSON.stringify({reply:'...I seem to have lost my voice. Come back later.'}) };
-
-  let body;
-  try { body = JSON.parse(event.body||'{}'); }
-  catch(e) { return { statusCode:400, body:JSON.stringify({error:'Bad request'}) }; }
 
   const { message, history=[], isAdmin=false, isDevMode=false, isNamingCheck=false, adminDirective=null, siteContext={} } = body;
   if (!message?.trim()) return { statusCode:400, body:JSON.stringify({error:'No message'}) };
