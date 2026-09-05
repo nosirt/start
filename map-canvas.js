@@ -200,11 +200,13 @@ function drawMapCanvas(){
   mGarden(ctx,980,1220,t);
   mRuins(ctx,740,980,t);
   mWireless(ctx,840,1620,t);
+  mSandbox(ctx,1180,1900,t);
   mMapLabel(ctx,980,1320,'the garden');
   mMapLabel(ctx,1560,1934,'town square');
   mMapLabel(ctx,2280,1160,'the tower');
   mMapLabel(ctx,1960,742,(typeof getKeepTitle==='function'?getKeepTitle():"nosirt's keep"));
   mMapLabel(ctx,840,1712,'the wireless');
+  mMapLabel(ctx,1180,1996,'sandbox');
 
   // ISLANDS
   mIsland(ctx,290,490,85,52);mIsland(ctx,2850,330,68,42);
@@ -1195,6 +1197,39 @@ function mCloud(ctx,x,y,w,h,op,dark){
   ctx.beginPath();ctx.ellipse(cx-w*.22,cy,w*.3,h*.52,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.ellipse(cx+w*.22,cy,w*.3,h*.52,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.ellipse(cx-w*.08,cy-h*.18,w*.33,h*.42,0,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function mSandbox(ctx,cx,cy,t){
+  ctx.save();
+  // ground shadow
+  ctx.fillStyle='rgba(40,45,60,.4)';ctx.beginPath();ctx.ellipse(cx,cy+28,36,14,0,0,Math.PI*2);ctx.fill();
+  // crate stack (a little workbench/workshop feel)
+  ctx.fillStyle='#7a6248';ctx.fillRect(cx-30,cy-2,26,26);
+  ctx.strokeStyle='#5a4834';ctx.lineWidth=1.5;ctx.strokeRect(cx-30,cy-2,26,26);
+  ctx.fillStyle='#8a7256';ctx.fillRect(cx+2,cy-14,28,38);
+  ctx.strokeStyle='#5a4834';ctx.strokeRect(cx+2,cy-14,28,38);
+  // little awning/tent over the workbench
+  ctx.fillStyle='#5a6a78';ctx.beginPath();
+  ctx.moveTo(cx-34,cy-14);ctx.lineTo(cx+16,cy-40);ctx.lineTo(cx+38,cy-14);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#3e4a54';ctx.lineWidth=1.5;ctx.stroke();
+  // support poles
+  ctx.strokeStyle='#6a5840';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(cx-34,cy-14);ctx.lineTo(cx-34,cy+22);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+38,cy-14);ctx.lineTo(cx+38,cy+22);ctx.stroke();
+  // a small spark/lightbulb hovering above — the "something is being built here" cue
+  const bob=Math.sin(t*1.8)*3;
+  const glow=ctx.createRadialGradient(cx+16,cy-52+bob,0,cx+16,cy-52+bob,26);
+  glow.addColorStop(0,`rgba(120,210,240,${.55+Math.sin(t*3)*.2})`);glow.addColorStop(1,'transparent');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(cx+16,cy-52+bob,26,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#bfe8f5';ctx.beginPath();ctx.arc(cx+16,cy-52+bob,5,0,Math.PI*2);ctx.fill();
+  // tiny orbiting motes — "ideas taking shape"
+  for(let i=0;i<3;i++){
+    const ang=t*1.2+i*(Math.PI*2/3);
+    const mx=cx+16+Math.cos(ang)*13,my=cy-52+bob+Math.sin(ang)*7;
+    ctx.fillStyle=`rgba(140,220,245,${.5+Math.sin(t*2+i)*.3})`;
+    ctx.beginPath();ctx.arc(mx,my,2,0,Math.PI*2);ctx.fill();
+  }
   ctx.restore();
 }
 

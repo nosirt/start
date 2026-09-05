@@ -7,7 +7,7 @@
 
 // ═══ VERSION HISTORY ═══
 // Current release number. Full changelog lives in version-history.js.
-const CURRENT_VERSION = '01.35';
+const CURRENT_VERSION = '01.36';
 
 // ═══ FIREBASE ═══
 const firebaseConfig = {

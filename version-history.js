@@ -7,6 +7,18 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.36',
+    date: '9/2026',
+    changes: [
+      'FIX (real bug, not just found): Sandbox was completely unreachable — it had a bottom-nav button, but no actual structure/pin on the map itself, so there was no way to discover or click into it from the map view at all. Added a real procedurally-drawn structure (a small workshop tent with a glowing spark, matching the map\'s existing hand-drawn style) plus a proper clickable map pin, wired into the same feature-toggle/pin system every other world already uses',
+      'Hardened the bare /wireless/{id} (no episode) deep link — traced this extensively and the resolution logic itself checked out, but found and closed two real race conditions along the way: showPage(\'wireless\') could render the home grid out from under an in-flight deep-link resolution before it got a chance to run, and there was no fallback if show/episode data had already finished loading before the retry listener hooks were wired. Added a guard for the first and a polling backstop for the second',
+      'Cover art / show thumbnails overhauled: the old "pick an exact timestamp" feature never actually worked — it called a canvas-capture function that always returned null (cross-origin restrictions block reading pixels from a YouTube iframe, exactly as its own code comment already admitted), had no UI button anywhere calling it, and the timestamp it did save was never read by anything that rendered a thumbnail. Replaced with something that actually works: pick from YouTube\'s real 4 auto-generated preview frames for the show\'s first episode. Also added genuine image upload (Firebase Storage) as a second input method alongside pasting a URL for "custom image" covers',
+      'NEW: Sandbox now has a built-in "ask the AI to build it" box — describe what you want, the site\'s own AI (same provider fallback chain used everywhere else, now with correct model IDs) writes real working code and types it into the paste box with a typewriter animation. Deliberately code-only, not a chat — a prompt that isn\'t asking for code (like "hi") returns nothing, not small talk',
+      '5 prompts/day per account (or per IP if signed out), shown as a lightning-bolt counter — admin is exempt entirely. Enforced server-side via a Firestore-backed daily counter in pixie-chat.js, not just a client-side check',
+      'Version bumped to 01.36'
+    ]
+  },
+  {
     version: '01.35',
     date: '9/2026',
     changes: [

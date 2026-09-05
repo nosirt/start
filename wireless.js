@@ -1421,27 +1421,20 @@ function setActiveShow(showId,opts){
 function openShow(showId){ setActiveShow(showId,{autoplay:false}); }
 
 // ── home grid ──
-// v01.27: returns the YouTube thumbnail URL for a given videoId and
-// optional thumbTs (integer seconds). If thumbTs is set we use the
-// YouTube storyboard URL which gives a clean frame at that second —
-// no storage, no upload, pure URL trick.
-function ytThumbUrl(videoId, thumbTs){
+// v01.27: returns the YouTube thumbnail URL for a given videoId.
+// v01.36: the old thumbTs/"exact timestamp" system never actually
+// worked and has been removed — YouTube does not expose a public URL
+// for an arbitrary, user-chosen timestamp; the ONLY per-video images it
+// exposes are 4 auto-generated preview frames (indices 0-3, picked by
+// YouTube itself, not user-controllable) plus resolution variants of
+// the main cover (default/mqdefault/hqdefault/sddefault/maxresdefault,
+// which are all the SAME frame at different sizes, not different
+// moments). Real per-frame choice is these 4 presets — see
+// setShowCoverFrame() in the show-form UI for picking between them.
+function ytThumbUrl(videoId, frameIndex){
   if(!videoId) return null;
-  if(thumbTs != null && Number.isFinite(thumbTs) && thumbTs >= 0){
-    // YouTube does not expose arbitrary-frame URLs in a documented way,
-    // but the vi/ endpoint gives 4 preset thumbnails. We pick the
-    // closest preset (0=cover, 1=25%, 2=50%, 3=75%) based on thumbTs
-    // relative to a guessed duration of 60 min (worst case).
-    // For most content thumbTs is a known keyframe so this is fine.
-    const presets = [
-      {key:'maxresdefault', t:0},
-      {key:'hqdefault',     t:0},
-      {key:'mqdefault',     t:0},
-    ];
-    // Use the YouTube /vi/ thumbnail + a canvas capture approach
-    // triggered once on hover/edit — stored as a data-URL on the element.
-    // For the initial render we fall back to hqdefault.
-    return 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
+  if(frameIndex!=null && [0,1,2,3].includes(frameIndex)){
+    return 'https://img.youtube.com/vi/' + videoId + '/' + frameIndex + '.jpg';
   }
   return 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
 }
@@ -1453,7 +1446,7 @@ function showCoverStyle(show,eps){
   if(show.coverType==='youtube'||!show.coverType){
     const first=eps&&eps[0];
     if(first&&first.videoId){
-      const thumbUrl = ytThumbUrl(first.videoId, first.thumbTs);
+      const thumbUrl = ytThumbUrl(first.videoId, show.coverFrameIndex);
       return {style:'background-image:url("' + thumbUrl + '");background-size:cover;background-position:center;'};
     }
   }
@@ -1465,51 +1458,63 @@ function showCoverStyle(show,eps){
   };
 }
 
-// Canvas-based YouTube frame capture — called from the thumbnail
-// timestamp editor. Renders a single frame into a hidden canvas.
-// Returns a promise that resolves to a data-URL string, or null on failure.
-async function captureYouTubeFrame(videoId, tsSeconds){
-  return new Promise(resolve => {
-    if(!videoId){ resolve(null); return; }
-    const ts = Math.max(0, Math.round(tsSeconds || 0));
-    // Build an embed URL with autoplay, mute, start time
-    const src = 'https://www.youtube.com/embed/' + videoId +
-      '?start=' + ts + '&autoplay=1&mute=1&controls=0';
-    const iframe = document.createElement('iframe');
-    iframe.src = src;
-    iframe.width = '480';
-    iframe.height = '270';
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;pointer-events:none;opacity:0;';
-    document.body.appendChild(iframe);
-    // Wait for the frame to load + seek, then try canvas capture.
-    // Cross-origin restrictions prevent actual pixel capture from YouTube iframes,
-    // so we fall back to storing just the timestamp on the episode doc.
-    // The thumbnail display still uses the hqdefault URL but the stored thumbTs
-    // is shown in the editor so admins know what they set.
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      resolve(null); // cross-origin blocks capture; just save ts as metadata
-    }, 3000);
-  });
+// v01.36: real "pick a frame" picker — replaces the broken fake-
+// timestamp system. Shows YouTube's actual 4 auto-generated preview
+// images for the show's first episode and lets the admin/owner click
+// their favorite. This is genuinely all YouTube exposes per video; an
+// arbitrary user-chosen timestamp isn't something YouTube provides a
+// public image URL for.
+let wcalCoverFrameIndex=null;
+function renderCoverFramePicker(){
+  const wrap=$('wp-cover-frame-picker');
+  if(!wrap) return;
+  const show=wpEditingShowId?(S.shows||[]).find(s=>s.id===wpEditingShowId):null;
+  const eps=(S.showEpisodesAll||[]).filter(e=>show&&e.showId===show.id).sort((a,b)=>(a.order||0)-(b.order||0));
+  const first=eps[0];
+  if(!first||!first.videoId){
+    wrap.innerHTML='<div class="sbx-empty" style="padding:8px 0;font-size:.72rem">add an episode first to pick a frame from it</div>';
+    return;
+  }
+  if(wcalCoverFrameIndex==null) wcalCoverFrameIndex = show&&show.coverFrameIndex!=null ? show.coverFrameIndex : 1;
+  wrap.innerHTML=[0,1,2,3].map(i=>
+    `<img src="${ytThumbUrl(first.videoId,i)}" class="wp-cover-frame-opt${i===wcalCoverFrameIndex?' selected':''}" onclick="setShowCoverFrame(${i})">`
+  ).join('');
+}
+function setShowCoverFrame(i){
+  wcalCoverFrameIndex=i;
+  renderCoverFramePicker();
 }
 
-// Open a thumbnail timestamp picker for an episode
-function openThumbPicker(episodeId){
-  const ep = (S.showEpisodesAll||S.episodes||[]).find(e=>e.id===episodeId);
-  if(!ep || !ep.videoId){ toast('no video found'); return; }
-  const cur = ep.thumbTs != null ? ep.thumbTs : 0;
-  const input = prompt(
-    'Enter thumbnail timestamp in seconds (e.g. 45 for 0:45):\n' +
-    'YouTube will show the frame closest to that time.\n' +
-    'Current: ' + cur + 's',
-    String(cur)
-  );
-  if(input === null) return;
-  const ts = parseInt(input, 10);
-  if(isNaN(ts) || ts < 0){ toast('invalid timestamp'); return; }
-  fbSaveShowEpisode(episodeId, {thumbTs: ts}, true);
-  toast('thumbnail timestamp saved: ' + ts + 's ✓');
+// v01.36: uploading an image for a show cover — goes to Firebase
+// Storage (same approach Sandbox uses for creation assets) and drops
+// the resulting URL straight into the same field the "paste a URL"
+// input uses, so saving works identically either way.
+async function uploadShowCoverImage(file){
+  if(!storage){ toast('image upload not available'); return; }
+  if(!file.type.startsWith('image/')){ toast('please choose an image file'); return; }
+  toast('uploading…');
+  try{
+    const path = `show_covers/${wpEditingShowId||'new'+Date.now()}/${Date.now()}_${file.name}`;
+    const ref = storage.ref().child(path);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    $('wp-show-cover-url').value = url;
+    toast('image uploaded ✓');
+  }catch(e){
+    console.error('cover upload failed:', e);
+    toast("couldn't upload that image");
+  }
 }
+
+// v01.36: the old captureYouTubeFrame()/openThumbPicker() timestamp
+// system was removed here — it never worked (cross-origin restrictions
+// block canvas capture from a YouTube iframe, as the old code's own
+// comment admitted), had no UI entry point calling it, and the
+// thumbTs value it saved was never actually read by anything that
+// rendered a thumbnail. Replaced by the real "pick a frame" flow
+// above (setShowCoverFrame/renderCoverFramePicker), which uses
+// YouTube's actual 4 auto-generated preview images instead of trying
+// to fake an arbitrary timestamp capture.
 
 // v01.18: Pixie's reserved shorts source. Fed via the same "paste a
 // playlist link" flow as any other show (see importPlaylist above) —
@@ -1830,6 +1835,8 @@ function openShowForm(showId){
   setCoverType(show?(show.coverType||'youtube'):'youtube');
   $('wp-show-cover-url').value=(show&&show.coverType==='custom')?(show.coverUrl||''):'';
   $('wp-show-cover-color').value=(show&&show.colorHex)?show.colorHex:'#c8892a';
+  wcalCoverFrameIndex=(show&&show.coverFrameIndex!=null)?show.coverFrameIndex:null;
+  if(wcalCoverType==='youtube')renderCoverFramePicker();
   $('wp-show-default-check').checked=!!(show&&show.isDefault);
   $('wp-show-form-modal').classList.add('open');
 }
@@ -1845,7 +1852,14 @@ function setCoverType(type){
     if(btn)btn.classList.toggle('active-cover',t===type);
   });
   $('wp-show-cover-url').style.display=type==='custom'?'block':'none';
+  const uploadBtn=$('wp-cover-upload-btn');
+  if(uploadBtn)uploadBtn.style.display=type==='custom'?'block':'none';
   $('wp-show-cover-color').style.display=type==='plain'?'block':'none';
+  const framePicker=$('wp-cover-frame-picker');
+  if(framePicker){
+    framePicker.style.display=type==='youtube'?'flex':'none';
+    if(type==='youtube')renderCoverFramePicker();
+  }
 }
 function saveShowForm(){
   const title=filt($('wp-show-title-input').value.trim());
@@ -1871,6 +1885,7 @@ function saveShowForm(){
   // Admin can set isPublic via the toggle in the banner; here default to preserving it
   const isPublic = S.adminUnlocked ? existingPublic : (existing ? existingPublic : false);
   const data={id,title,description,coverType:wcalCoverType,coverUrl,colorHex,order,
+    coverFrameIndex:(wcalCoverType==='youtube'&&wcalCoverFrameIndex!=null)?wcalCoverFrameIndex:null,
     isDefault:makeDefault,createdAt:isNew?Date.now():(existing?existing.createdAt:Date.now()),
     owner, isPublic};
   const finishSave=async()=>{

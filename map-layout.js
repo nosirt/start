@@ -147,7 +147,8 @@ const PIN_LOCS={
   square:[650,3410],
   forum:[3230,2070],
   castle:[4260,1510],
-  wireless:[4150,2940]
+  wireless:[4150,2940],
+  sandbox:[4500,3220]
 };
 const MAP_MAX_SCALE=1.35;
 
@@ -237,7 +238,7 @@ function updatePinOverlay(){
     const screenX=S.mapX+sx*S.mapScale;
     const screenY=S.mapY+sy*S.mapScale;
     const dist=Math.hypot(screenX-vw/2,screenY-vh/2);
-    if(dist<best){best=dist;nearest={garden:'near the garden',square:'near town square',forum:'near the tower',castle:"near nosirt's keep",wireless:'near the wireless'}[name]||name;}
+    if(dist<best){best=dist;nearest={garden:'near the garden',square:'near town square',forum:'near the tower',castle:"near nosirt's keep",wireless:'near the wireless',sandbox:'near the sandbox'}[name]||name;}
     el.style.left=screenX+'px';
     el.style.top=screenY+'px';
     const labelScale=Math.max(0.5,Math.min(1.6,1/S.mapScale));
@@ -266,14 +267,14 @@ function updatePinOverlay(){
 // note instead of entering. See VERSION_HISTORY / README for details.
 const FEATURE_LABELS={
   garden:'🌿 garden',square:'🏚 square',forum:'🗼 tower (n/)',
-  wireless:'🎙 wireless',castle:"🏰 nosirt's keep",intro:'🚪 welcome banner'
+  wireless:'🎙 wireless',castle:"🏰 nosirt's keep",sandbox:'🧰 sandbox',intro:'🚪 welcome banner'
 };
 const REVIEW_LABELS={
   garden:'the garden',square:'town square',forum:'the tower',
-  castle:"nosirt's keep",wireless:'the wireless'
+  castle:"nosirt's keep",wireless:'the wireless',sandbox:'sandbox'
 };
-const NAV_TOGGLE_KEYS=['garden','square','forum','wireless'];
-const PIN_TOGGLE_KEYS=['garden','square','forum','castle','wireless'];
+const NAV_TOGGLE_KEYS=['garden','square','forum','wireless','sandbox'];
+const PIN_TOGGLE_KEYS=['garden','square','forum','castle','wireless','sandbox'];
 
 // Applies the current S.featureToggles state to the bottom nav + map pins.
 // Safe to call any time (e.g. right after a Firebase sync, or on load).
@@ -534,6 +535,19 @@ function handleWirelessDeepLinkSegments(segments){
   S.pendingWirelessDeepLink={username,showShortId,epShortId};
   showPage('wireless');
   _tryResolvePendingWirelessDeepLink();
+  // v01.36: defensive polling backstop — the listener hooks in
+  // wireless.js are the normal path, but if show/episode data had
+  // ALREADY loaded before this ran (e.g. browsing around before
+  // pasting in a URL), no listener callback fires again to trigger a
+  // retry. This catches that case without needing to touch every
+  // possible call site. Cheap: stops itself the moment resolution
+  // succeeds or after 5 seconds.
+  let attempts=0;
+  const poll=setInterval(()=>{
+    attempts++;
+    if(!S.pendingWirelessDeepLink || attempts>25){ clearInterval(poll); return; }
+    _tryResolvePendingWirelessDeepLink();
+  },200);
 }
 
 function _tryResolvePendingWirelessDeepLink(){
@@ -644,8 +658,14 @@ function showPage(page){
   if(page==='forum')renderPosts();
   if(page==='wireless'){
     if(typeof ensureWirelessEpisodesListener==='function')ensureWirelessEpisodesListener();
-    if(S.currentShowId&&typeof renderEpisodes==='function')renderEpisodes();
-    else if(typeof renderShowGrid==='function')renderShowGrid();
+    // v01.36: don't let the default "show grid or current show" logic
+    // stomp on an in-flight deep link resolution — if one is pending,
+    // leave the view alone; _tryResolvePendingWirelessDeepLink() (which
+    // runs right after this) owns deciding what to show.
+    if(!S.pendingWirelessDeepLink){
+      if(S.currentShowId&&typeof renderEpisodes==='function')renderEpisodes();
+      else if(typeof renderShowGrid==='function')renderShowGrid();
+    }
   }
   if(page==='sandbox'){
     if(!S.sandboxInited && typeof initSandboxPage==='function'){ S.sandboxInited=true; initSandboxPage(); }

@@ -116,6 +116,10 @@
     <div class="pin-dot" style="background:rgba(255,210,110,.65)"></div><div class="pin-label">the wireless</div>
     <div class="pin-construction">🚧</div>
   </div>
+  <div id="fpin-sandbox" class="map-pin" onclick="goToLocation('sandbox')" style="pointer-events:all">
+    <div class="pin-dot" style="background:rgba(120,210,240,.65)"></div><div class="pin-label">sandbox</div>
+    <div class="pin-construction">🚧</div>
+  </div>
 </div>
 
 <!-- v01.07: shown when tapping a pin/nav item the admin has switched off -->
@@ -486,7 +490,12 @@
         <button class="wcal-mini-btn" id="wp-cover-opt-custom" onclick="setCoverType('custom')">custom image</button>
         <button class="wcal-mini-btn" id="wp-cover-opt-plain" onclick="setCoverType('plain')">plain color</button>
       </div>
+      <div id="wp-cover-frame-picker" style="display:none;gap:8px;flex-wrap:wrap"></div>
       <input class="sq-input" id="wp-show-cover-url" placeholder="image url..." style="display:none">
+      <label class="wcal-mini-btn" id="wp-cover-upload-btn" style="display:none;text-align:center;cursor:pointer">
+        upload an image
+        <input type="file" accept="image/*" style="display:none" onchange="if(this.files[0])uploadShowCoverImage(this.files[0])">
+      </label>
       <input type="color" id="wp-show-cover-color" value="#c8892a" style="display:none;width:100%;height:38px;border:none;border-radius:8px;background:none;">
     </div>
     <label class="wp-default-check">
@@ -510,6 +519,110 @@
   </div>
 </div>
 
+<!-- SANDBOX (v01.35) — deliberately its own visual language: a cooler,
+     workshop/IDE feel rather than the warm amber/serif theme used
+     everywhere else, scoped entirely under the sbx- prefix so it can't
+     leak into (or be leaked into by) the rest of the site's styles. -->
+<div id="page-sandbox" class="page sbx-page">
+  <div class="page-inner sbx-page-inner">
+    <div class="sbx-topbar">
+      <div>
+        <div class="sbx-brand">SANDBOX</div>
+        <div class="sbx-sub">bring code in, make it run, make it yours</div>
+      </div>
+      <nav class="sbx-nav">
+        <button class="sbx-nav-btn active" data-sbx-view="workshop">Workshop</button>
+        <button class="sbx-nav-btn" data-sbx-view="store">App Store</button>
+        <button class="sbx-nav-btn" data-sbx-view="world">My Space</button>
+      </nav>
+    </div>
+
+    <!-- WORKSHOP: paste/upload/zip/drag-drop -> compatibility report -> run. No account needed. -->
+    <section id="sbx-view-workshop" class="sbx-view active">
+      <div class="sbx-layout">
+        <div class="sbx-panel sbx-editor">
+          <div class="sbx-head">
+            <div>
+              <h1>Import a creation</h1>
+              <p>Paste normal AI-generated HTML, JavaScript, or CSS — no special commands needed. Sandbox adapts it automatically.</p>
+            </div>
+            <label class="sbx-upload">
+              <input id="sbx-files-input" type="file" multiple accept=".html,.htm,.js,.mjs,.css,.json,.txt,.png,.jpg,.jpeg,.gif,.svg,.webp,.wav,.mp3,.ogg,.zip">
+              <span>＋ Upload files / ZIP</span>
+            </label>
+          </div>
+          <div id="sbx-drop" class="sbx-drop">Drop a project here — HTML · JS · CSS · assets · ZIP</div>
+
+          <!-- v01.36: ask Sandbox's built-in AI to write the code for you -->
+          <div class="sbx-ai-box">
+            <div class="sbx-ai-head">
+              <span>✨ ask the AI to build it</span>
+              <span id="sbx-ai-credits" class="sbx-ai-credits">5/5 ⚡</span>
+            </div>
+            <div class="sbx-ai-row">
+              <input id="sbx-ai-prompt" class="sbx-text-input" placeholder="e.g. a flappy bird clone with a score counter" style="flex:1">
+              <button class="sbx-primary" id="sbx-ai-submit" onclick="sbxSubmitAiPrompt()">Generate</button>
+            </div>
+          </div>
+
+          <input id="sbx-title-input" class="sbx-text-input" placeholder="Creation name" value="My Creation" style="margin:0 22px 8px;width:calc(100% - 44px)">
+          <input id="sbx-desc-input" class="sbx-text-input" placeholder="What does this do?" style="margin:0 22px 12px;width:calc(100% - 44px)">
+          <div class="sbx-code-wrap"><textarea id="sbx-code" spellcheck="false" placeholder="Paste your code here"></textarea></div>
+          <div id="sbx-file-list" class="sbx-file-list"></div>
+          <div class="sbx-actions">
+            <button class="sbx-primary" id="sbx-run-btn" onclick="sbxRun()">▶ Run</button>
+            <button onclick="sbxSaveDraft()">Save to my space</button>
+            <button onclick="sbxPublish()">Publish to App Store</button>
+            <button onclick="sbxNewCreation()">New</button>
+          </div>
+        </div>
+        <aside class="sbx-panel sbx-report">
+          <div class="sbx-head sbx-compact">
+            <div><h2>Compatibility</h2><p id="sbx-summary">Nothing imported yet.</p></div>
+            <span id="sbx-pill" class="sbx-pill">WAITING</span>
+          </div>
+          <div id="sbx-report-body"><div class="sbx-empty">Paste code or upload a project. Compatibility checks appear here.</div></div>
+        </aside>
+        <section class="sbx-panel sbx-runner-panel">
+          <div class="sbx-runner-head">
+            <div><h2>Live preview</h2><p id="sbx-status">Ready</p></div>
+          </div>
+          <iframe id="sbx-runner" title="Sandbox runner" sandbox="allow-scripts"></iframe>
+          <div id="sbx-console" class="sbx-console"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- APP STORE: public creations. Browsing + playing needs no account. -->
+    <section id="sbx-view-store" class="sbx-view">
+      <div class="sbx-hero">
+        <div><h1>App Store</h1><p>Published creations from everyone. Anyone can open and play these — sign in to save one to your own space.</p></div>
+      </div>
+      <input id="sbx-search" class="sbx-text-input" placeholder="search creations…" autocomplete="off" style="margin:0 22px 16px;width:calc(100% - 44px)">
+      <div id="sbx-store-grid" class="sbx-grid"></div>
+    </section>
+
+    <!-- MY SPACE: own drafts + everything added from the App Store. Account required. -->
+    <section id="sbx-view-world" class="sbx-view">
+      <div class="sbx-hero">
+        <div><h1>My Space</h1><p>Your own creations, plus anything you've added from the App Store. Added items always run the creator's current version.</p></div>
+      </div>
+      <div id="sbx-world-grid" class="sbx-grid"></div>
+    </section>
+
+    <!-- PLAY: opened from a card in Store/World. Guest-accessible. -->
+    <section id="sbx-view-play" class="sbx-view">
+      <div class="sbx-hero">
+        <div><h1 id="sbx-play-title">Creation</h1><p id="sbx-play-meta"></p></div>
+        <button onclick="sbxShowView('store')">← Back</button>
+      </div>
+      <div class="sbx-play-shell">
+        <iframe id="sbx-play-frame" title="Playing creation" sandbox="allow-scripts"></iframe>
+      </div>
+    </section>
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <div id="bottom-nav" style="display:none">
   <div class="nav-row">
@@ -517,6 +630,7 @@
     <button class="nav-btn" onclick="navTo('square')" id="nav-square"><span class="btn-icon">🏚</span>square</button>
     <button class="nav-btn" onclick="navTo('forum')" id="nav-forum"><span class="btn-icon">🗼</span>n/</button>
     <button class="nav-btn" onclick="navTo('wireless')" id="nav-wireless"><span class="btn-icon">🎙</span>wireless</button>
+    <button class="nav-btn" onclick="navTo('sandbox')" id="nav-sandbox"><span class="btn-icon">🧰</span>sandbox</button>
     <button class="nav-btn" onclick="navigateTo('')" id="nav-map"><span class="btn-icon">🗺</span>map</button>
   </div>
 </div>
@@ -1112,6 +1226,8 @@
 <script src="pixie.js"></script>
 <script src="playlist.js"></script>
 <script src="sharing.js"></script>
+<script src="sandbox-adapter.js"></script>
+<script src="sandbox.js"></script>
 
   <!-- PWA install instructions modal -->
   <div id="pwa-instructions-modal" onclick="if(event.target===this)closePwaModal()">

@@ -385,6 +385,7 @@ function sbxShowView(view){
 
 function initSandboxPage(){
   if(sbxEl('sbx-code') && !sbxEl('sbx-code').value) sbxNewCreation();
+  sbxUpdateAiCredits((typeof S!=='undefined' && S.adminUnlocked) ? null : 5);
   document.querySelectorAll('[data-sbx-view]').forEach(btn=>{
     btn.addEventListener('click', ()=>sbxShowView(btn.dataset.sbxView));
   });
@@ -410,4 +411,73 @@ function initSandboxPage(){
     });
   }
   sbxAnalyze();
+}
+
+// ═══ Ask Sandbox's built-in AI to write the code — v01.36 ═══
+// Deliberately code-only: a "hi" prompt gets nothing back, not chat.
+// 5 prompts/day per account (or per IP if signed out), admin exempt —
+// enforced server-side in pixie-chat.js, this is just the UI for it.
+
+function sbxUpdateAiCredits(remaining){
+  const el = sbxEl('sbx-ai-credits');
+  if(!el) return;
+  if(remaining==null){ el.textContent = '∞ ⚡'; el.classList.remove('empty'); return; }
+  el.textContent = `${remaining}/5 ⚡`;
+  el.classList.toggle('empty', remaining<=0);
+}
+
+async function sbxSubmitAiPrompt(){
+  const input = sbxEl('sbx-ai-prompt');
+  const btn = sbxEl('sbx-ai-submit');
+  const prompt = (input.value||'').trim();
+  if(!prompt){ toast('describe what you want built first'); return; }
+  btn.disabled = true; btn.classList.add('sbx-thinking'); btn.textContent = 'Thinking…';
+  try{
+    const res = await fetch('/.netlify/functions/pixie-chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        mode: 'sandboxCode',
+        prompt,
+        isAdmin: !!(typeof S!=='undefined' && S.adminUnlocked),
+        username: (typeof S!=='undefined' && S.account) ? S.account.username : null
+      })
+    });
+    const data = await res.json();
+    if(!data.ok){ toast(data.error || "couldn't generate that"); return; }
+    if(data.remaining!=null) sbxUpdateAiCredits(data.remaining);
+    if(!data.code || !data.code.trim()){
+      toast("that doesn't look like a coding request — try describing something to build, like \"a calculator\" or \"flappy bird\"");
+      return;
+    }
+    await sbxTypewriteCode(data.code);
+    input.value = '';
+    sbxAnalyze();
+  }catch(e){
+    console.error('sandbox AI request failed:', e);
+    toast("couldn't reach the AI right now");
+  }finally{
+    btn.disabled = false; btn.classList.remove('sbx-thinking'); btn.textContent = 'Generate';
+  }
+}
+
+// Types the generated code into the editor a chunk at a time, rather
+// than dumping it in instantly — matches the "watching code appear"
+// feel of an AI actually writing it, not just a paste.
+function sbxTypewriteCode(fullText){
+  return new Promise(resolve=>{
+    const codeEl = sbxEl('sbx-code');
+    if(!codeEl){ resolve(); return; }
+    codeEl.value = '';
+    codeEl.classList.add('sbx-typing');
+    let i = 0;
+    const CHUNK = Math.max(2, Math.round(fullText.length/240)); // finishes in ~2s regardless of length
+    const step = ()=>{
+      i += CHUNK;
+      codeEl.value = fullText.slice(0, i);
+      codeEl.scrollTop = codeEl.scrollHeight;
+      if(i < fullText.length){ requestAnimationFrame(step); }
+      else{ codeEl.classList.remove('sbx-typing'); resolve(); }
+    };
+    requestAnimationFrame(step);
+  });
 }
