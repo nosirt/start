@@ -145,7 +145,7 @@ exports.handler = async function (event) {
       }
       await showRef.delete();
       // Also delete all episodes for this show
-      const eps = await db.collection('nosirt_episodes').where('showId', '==', showId).get();
+      const eps = await db.collection('nosirt_show_episodes').where('showId', '==', showId).get();
       const batch = db.batch();
       eps.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
@@ -258,7 +258,7 @@ exports.handler = async function (event) {
       if (!show.exists || show.data().owner !== username) {
         return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Not your show.' }) };
       }
-      await db.collection('nosirt_episodes').doc(ep.id).set({ ...ep, owner: username }, { merge: false });
+      await db.collection('nosirt_show_episodes').doc(ep.id).set({ ...ep, owner: username }, { merge: false });
       return { statusCode: 200, body: JSON.stringify({ ok: true }) };
     }
 
@@ -269,7 +269,7 @@ exports.handler = async function (event) {
       if (!show.exists || show.data().owner !== username) {
         return { statusCode: 200, body: JSON.stringify({ ok: false, error: 'Not your show.' }) };
       }
-      await db.collection('nosirt_episodes').doc(episodeId).delete();
+      await db.collection('nosirt_show_episodes').doc(episodeId).delete();
       return { statusCode: 200, body: JSON.stringify({ ok: true }) };
     }
 
