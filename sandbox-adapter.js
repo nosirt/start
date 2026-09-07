@@ -105,30 +105,44 @@ window.SandboxAdapter = (() => {
     const jsFiles = files.filter(f => f.kind === 'js');
     const cssFiles = files.filter(f => f.kind === 'css');
 
-    let html = '', js = [], css = [];
+    let html = '', scripts = [], css = [];
+
+    // Extract inline scripts without discarding external libraries. Earlier
+    // versions stripped *every* <script> tag, so a pasted game that loaded
+    // Phaser/p5/etc. from a CDN lost the library it depended on. Inline
+    // modules are kept distinct from classic scripts because `import` must
+    // remain top-level and cannot live inside the classic-script try/catch.
+    const collectInlineScripts = source => {
+      return source.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (tag, attrs, content) => {
+        if (/\bsrc\s*=/i.test(attrs)) return tag;
+        scripts.push({
+          code: content,
+          module: /\btype\s*=\s*(["'])module\1/i.test(attrs)
+        });
+        return '';
+      });
+    };
 
     if (htmlFiles.length) {
       html = htmlFiles.map(f => f.text).join('\n');
-      js.push(...[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]));
       css.push(...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m => m[1]));
-      html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+      html = collectInlineScripts(html).replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
     } else if ((code || '').trim()) {
       if (/<(?:!doctype|html|head|body)\b/i.test(code)) {
         html = code;
-        js.push(...[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]));
         css.push(...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(m => m[1]));
-        html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+        html = collectInlineScripts(html).replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
       } else if (/<style[\s>]/i.test(code)) {
         css.push(code);
       } else {
-        js.push(code);
+        scripts.push({code, module:false});
       }
     }
-    js.push(...jsFiles.map(f => f.text));
+    scripts.push(...jsFiles.map(f => ({code:f.text, module:/\.mjs$/i.test(f.name)})));
     css.push(...cssFiles.map(f => f.text));
 
     html = rewriteRefs(html, urlMap);
-    const joinedJs = rewriteRefs(js.join('\n'), urlMap);
+    scripts = scripts.map(script => Object.assign({}, script, {code:rewriteRefs(script.code, urlMap)}));
     const joinedCss = rewriteRefs(css.join('\n'), urlMap);
 
     const shell = html.trim() || '<main id="app"></main>';
@@ -136,12 +150,10 @@ window.SandboxAdapter = (() => {
       `<style>html,body{margin:0;padding:0;min-height:100%;font-family:system-ui,sans-serif}</style>` +
       `<style>${joinedCss.replace(/<\/style/gi, '<\\/style')}</style>`;
 
-    // v01.35: fixed — the prototype had `try{ ... }` with no catch here,
-    // which is a syntax error the moment the runner iframe tries to
-    // parse it. Every adapted creation would have silently failed to
-    // load at all. Also wrapped the whole user script in its own
-    // try/catch so one bug in the pasted code produces a visible error
-    // instead of a blank white iframe.
+    // Install runtime reporting before any user code. A window-level error
+    // handler catches both parse-time and runtime failures, which lets the
+    // user's script keep normal browser semantics (important for inline
+    // onclick handlers and code that expects top-level functions on window).
     const runtime = `<script>
 window.SandboxHost = {
   notify: function(type, data) {
@@ -149,6 +161,17 @@ window.SandboxHost = {
     catch (e) {}
   }
 };
+['log','info','warn','error'].forEach(function(level) {
+  const original = console[level];
+  console[level] = function() {
+    const message = Array.prototype.map.call(arguments, function(value) {
+      try { return typeof value === 'string' ? value : JSON.stringify(value); }
+      catch (e) { return String(value); }
+    }).join(' ');
+    SandboxHost.notify('console', { level: level, message: message });
+    if (original) original.apply(console, arguments);
+  };
+});
 addEventListener('error', function(e) {
   SandboxHost.notify('error', { message: e.message, line: e.lineno });
 });
@@ -158,8 +181,19 @@ addEventListener('unhandledrejection', function(e) {
 SandboxHost.notify('ready', {});
 <\/script>`;
 
-    const wrappedJs = `try {\n${joinedJs}\n} catch (e) {\n  if (window.SandboxHost) SandboxHost.notify('error', { message: String(e && e.stack || e) });\n  console.error(e);\n}`;
-    const scriptTag = '<script>' + wrappedJs.replace(/<\/script/gi, '<\\/script>') + '<\\/script>';
+    const classicCode = scripts.filter(script=>!script.module).map(script=>script.code).join('\n');
+    // IMPORTANT: only user-provided *internal* </script> sequences are
+    // escaped. The final closing tag itself must be a real </script> tag.
+    // The old adapter accidentally escaped that final tag too, which made
+    // browsers parse </body></html> as JavaScript. Result: CSS/backgrounds
+    // loaded, but every generated game looked frozen before its first frame.
+    const classicTag = classicCode.trim()
+      ? '<script>' + classicCode.replace(/<\/script/gi, '<\\/script>') + '\nSandboxHost.notify(\'running\', {});</script>'
+      : '';
+    const moduleTags = scripts.filter(script=>script.module).map(script=>
+      '<script type="module">' + script.code.replace(/<\/script/gi, '<\\/script>') + '</script>'
+    ).join('\n');
+    const scriptTags = classicTag + moduleTags;
 
     // v01.36 BUG FIX: this used to require a literal </head> and </body>
     // in the pasted/generated HTML to inject the CSS and JS into — if
@@ -176,10 +210,10 @@ SandboxHost.notify('ready', {});
     if (/<html\b/i.test(shell)) {
       let out = shell;
       out = /<\/head>/i.test(out) ? out.replace(/<\/head>/i, head + '</head>') : (head + out);
-      out = /<\/body>/i.test(out) ? out.replace(/<\/body>/i, runtime + scriptTag + '</body>') : (out + runtime + scriptTag);
+      out = /<\/body>/i.test(out) ? out.replace(/<\/body>/i, runtime + scriptTags + '</body>') : (out + runtime + scriptTags);
       return out;
     }
-    return `<!doctype html><html><head>${head}</head><body>${shell}${runtime}${scriptTag}</body></html>`;
+    return `<!doctype html><html><head>${head}</head><body>${shell}${runtime}${scriptTags}</body></html>`;
   }
 
   return { classify, inspect, build };

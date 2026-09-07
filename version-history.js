@@ -13,7 +13,9 @@ const VERSION_HISTORY = [
       'Refined chat into an adaptive mobile sheet / desktop conversation window with smoother entrance and message motion',
       'Improved message composition controls, keyboard behavior, accessibility labels, and reduced-motion support',
       'Added the supplied full-resolution Nosirt map artwork to the project assets',
-      'Maintenance pass: restored the admin display-mode controls and corrected user-show episode writes/deletes to the live nosirt_show_episodes collection'
+      'Maintenance pass: restored the admin display-mode controls and corrected user-show episode writes/deletes to the live nosirt_show_episodes collection',
+      'Sandbox fix: corrected the generated user-script closing tag so pasted and AI-generated HTML games execute instead of rendering only their HTML/CSS shell; preserved external script libraries and inline modules too',
+      'Sandbox refinement: added visible runner lifecycle/error feedback, restart controls, a full-height game canvas, and a cyberpunk Runtime Studio treatment'
     ]
   },
   {

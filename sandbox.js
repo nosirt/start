@@ -39,10 +39,26 @@ let sbx = {
   worldEntries: [],     // resolved {creationId, addedAt, creation} — creation re-fetched live, not cached forever
   view: 'workshop'
 };
+let sbxRunNonce = 0;
 
 function sbxEl(id){ return document.getElementById(id); }
 
 function sbxStatus(msg){ const el=sbxEl('sbx-status'); if(el) el.textContent=msg; }
+function sbxSetConsole(message, isError){
+  const consoleEl = sbxEl('sbx-console');
+  if(!consoleEl) return;
+  consoleEl.textContent = message || '';
+  consoleEl.classList.toggle('sbx-console-error', !!isError);
+}
+function sbxLoadFrame(frame, build, onLoaded){
+  if(!frame) return;
+  const nonce = ++sbxRunNonce;
+  frame.onload = ()=>{
+    if(nonce!==sbxRunNonce) return;
+    if(typeof onLoaded==='function') onLoaded();
+  };
+  frame.srcdoc = build;
+}
 function sbxRenderFiles(){
   const el=sbxEl('sbx-file-list');
   if(!el) return;
@@ -106,10 +122,9 @@ async function sbxRun(){
     sbx.code = code;
     sbx.build = await SandboxAdapter.build(code, sbx.files);
     const frame = sbxEl('sbx-runner');
-    if(frame) frame.srcdoc = sbx.build;
-    sbxStatus('Running');
-    const consoleEl = sbxEl('sbx-console');
-    if(consoleEl) consoleEl.textContent = '';
+    sbxSetConsole('');
+    sbxStatus('Starting live preview…');
+    sbxLoadFrame(frame, sbx.build, ()=>sbxStatus('Live · click or tap inside to interact'));
     const titleEl = sbxEl('sbx-run-title');
     if(titleEl) titleEl.textContent = (sbxEl('sbx-title-input')&&sbxEl('sbx-title-input').value) || 'Live preview';
     // v01.37: Run now takes you straight to the full-page canvas — no
@@ -125,15 +140,29 @@ async function sbxRun(){
 
 window.addEventListener('message', e=>{
   if(!e.data || e.data.source!=='nosirt-sandbox') return;
-  const consoleEl = sbxEl('sbx-console');
-  if(!consoleEl) return;
+  const liveFrame = sbxEl('sbx-runner'), playFrame = sbxEl('sbx-play-frame');
+  if(e.source!==liveFrame?.contentWindow && e.source!==playFrame?.contentWindow) return;
   if(e.data.type==='error'){
-    consoleEl.textContent = 'Error: ' + (e.data.data && e.data.data.message || 'unknown error');
-    consoleEl.classList.add('sbx-console-error');
+    const detail = e.data.data && e.data.data.message || 'unknown error';
+    sbxSetConsole('Runtime error: ' + detail, true);
+    if(e.source===liveFrame?.contentWindow) sbxStatus('Runtime error — see details below');
+  } else if(e.data.type==='console'){
+    const detail = e.data.data && e.data.data.message || '';
+    const level = e.data.data && e.data.data.level || 'log';
+    if(detail) sbxSetConsole(`${level}: ${detail}`, level==='error');
   } else if(e.data.type==='ready'){
-    consoleEl.classList.remove('sbx-console-error');
+    sbxSetConsole('');
+  } else if(e.data.type==='running' && e.source===liveFrame?.contentWindow){
+    sbxStatus('Live · click or tap inside to interact');
   }
 });
+
+function sbxRestartRun(){
+  if(!sbx.build){ toast('run some code first'); return; }
+  sbxSetConsole('');
+  sbxStatus('Restarting…');
+  sbxLoadFrame(sbxEl('sbx-runner'), sbx.build, ()=>sbxStatus('Live · click or tap inside to interact'));
+}
 
 // ═══ Asset storage — images/audio/etc. in a saved or published
 // creation need REAL persistent URLs, not the ephemeral blob URLs the
@@ -229,7 +258,7 @@ function sbxNewCreation(){
   sbxAnalyze();
   sbxSyncHighlight();
   sbxAutoResize(sbxEl('sbx-code'), 220, 640);
-  const frame = sbxEl('sbx-runner'); if(frame) frame.srcdoc='';
+  sbxLoadFrame(sbxEl('sbx-runner'), '');
   sbxStatus('Ready');
   sbxShowSubView('write');
 }
@@ -376,7 +405,7 @@ async function sbxPlay(creationId){
   const filesForBuild = (creation.files||[]).map(f=> f.kind==='asset' ? {name:f.name,kind:'asset'} : f);
   try{
     const built = await SandboxAdapter.build(creation.code||'', filesForBuild, persistentUrls);
-    if(frame) frame.srcdoc = built;
+    if(frame) sbxLoadFrame(frame, built);
   }catch(e){
     if(metaEl) metaEl.textContent = "this creation couldn't be adapted to run: " + e.message;
   }

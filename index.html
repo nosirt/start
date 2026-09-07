@@ -601,9 +601,13 @@
 
       <div id="sbx-sub-run" class="sbx-subview">
         <div class="sbx-runner-head">
-          <div><h2 id="sbx-run-title">Live preview</h2><p id="sbx-status">Ready</p></div>
+          <div><h2 id="sbx-run-title">Live preview</h2><p id="sbx-status">Ready to run locally</p></div>
+          <div class="sbx-runner-actions">
+            <button class="sbx-runner-action" onclick="sbxRestartRun()" title="Restart the live preview">↻ Restart</button>
+            <button class="sbx-runner-action" onclick="sbxShowSubView('write')" title="Return to the editor">⌘ Edit</button>
+          </div>
         </div>
-        <iframe id="sbx-runner" title="Sandbox runner" sandbox="allow-scripts"></iframe>
+        <iframe id="sbx-runner" title="Sandbox runner" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
         <div id="sbx-console" class="sbx-console"></div>
       </div>
     </section>
@@ -632,7 +636,7 @@
         <button onclick="sbxShowView('store')">← Back</button>
       </div>
       <div class="sbx-play-shell">
-        <iframe id="sbx-play-frame" title="Playing creation" sandbox="allow-scripts"></iframe>
+        <iframe id="sbx-play-frame" title="Playing creation" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
       </div>
     </section>
   </div>
