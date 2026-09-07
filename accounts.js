@@ -236,42 +236,6 @@ document.addEventListener('click', e => {
   }
 });
 
-async function handleAvatarEmojiChange(inputEl){
-  if(!S.account){ toast('sign in first'); return; }
-  const raw = inputEl.value;
-  if(!isSingleEmojiClient(raw)){
-    toast('pick just one emoji');
-    inputEl.value = S.account.avatarEmoji || '🙂';
-    return;
-  }
-  const res = await callAccountUpdate({ action:'setAvatar', username:S.account.username, token:S.account.token, avatarEmoji:raw });
-  if(!res.ok){
-    toast(res.error || "couldn't update — try again");
-    inputEl.value = S.account.avatarEmoji || '🙂';
-    return;
-  }
-  S.account.avatarEmoji = res.avatarEmoji;
-  renderAccountPanel();
-  toast('face updated');
-  // Live to others right away, not just on the next 20s heartbeat.
-  if(db) fbSavePresence(S.userId, { id:S.userId, num:getChatNum(), displayName:getDisplayLabel(), avatarEmoji:getDisplayAvatar(), ts:Date.now() });
-}
-
-async function handleAccountDisplayNameChange(){
-  if(!S.account) return;
-  const input = $('account-displayname-input');
-  if(!input) return;
-  const name = input.value.trim();
-  if(!name){ toast('name cannot be empty'); return; }
-  const res = await callAccountUpdate({ action:'setDisplayName', username:S.account.username, token:S.account.token, displayName:name });
-  if(!res.ok){ toast(res.error || "couldn't update"); return; }
-  S.account.displayName = res.displayName;
-  renderAccountPanel();
-  toast('name updated');
-  if(db) fbSavePresence(S.userId, { id:S.userId, num:getChatNum(), displayName:getDisplayLabel(), avatarEmoji:getDisplayAvatar(), ts:Date.now() });
-  if(typeof renderChatMessages==='function') renderChatMessages();
-}
-
 // ═══ Rendering ═══
 
 function renderAccountPanel(){

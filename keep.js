@@ -245,16 +245,6 @@ function storyThumbnailHtml(b, size){
     '</div>';
 }
 
-// v01.25: story visibility rules
-// - isPublic:true  → visible to everyone in the keep
-// - isPublic:false/undefined → private: only visible to the uploader (owner field)
-// - S.adminUnlocked → sees everything
-function canSeeStory(b){
-  if(S.adminUnlocked) return true;
-  if(b.isPublic) return true;
-  if(S.account && b.owner === S.account.username) return true;
-  return false;
-}
 function isMyStory(b){
   if(S.adminUnlocked) return true;
   if(S.account && b.owner === S.account.username) return true;

@@ -7,7 +7,7 @@
 
 // ═══ VERSION HISTORY ═══
 // Current release number. Full changelog lives in version-history.js.
-const CURRENT_VERSION = '01.36';
+const CURRENT_VERSION = '01.38';
 
 // ═══ FIREBASE ═══
 const firebaseConfig = {
@@ -80,10 +80,6 @@ function fbListenStories(cb) {
 function fbSaveShow(id, data, merge) {
   if (!db) return;
   try { db.collection('nosirt_shows').doc(id).set(data, {merge: !!merge}); } catch(e) {}
-}
-function fbDeleteShow(id) {
-  if (!db) return;
-  try { db.collection('nosirt_shows').doc(id).delete(); } catch(e) {}
 }
 function fbListenShows(cb) {
   if (!db) return;
@@ -236,22 +232,6 @@ function fbListenCollection(collection, cb) {
       cb(items);
     });
   } catch(e) {}
-}
-
-// v01.24: READ-ONLY lookup of another users account doc (for showing
-// their display name/avatar in a DM thread, friend list, etc). This site
-// writes straight to Firestore client-side for almost everything else —
-// deliberately NOT for nosirt_users. All writes to that collection go
-// through account-auth.js / account-update.js (Netlify functions using
-// the Admin SDK), which check the account's token first. If Firestore
-// security rules for nosirt_users ever allow client writes, that
-// server-side check becomes pointless — keep that collection
-// write-locked to admin-SDK-only in the Firestore rules console.
-function fbGetUserDoc(username){
-  if(!db || !username) return Promise.resolve(null);
-  return db.collection('nosirt_users').doc(username).get()
-    .then(doc=>doc.exists?doc.data():null)
-    .catch(()=>null);
 }
 
 // v01.24: DMs — read-only listener, filtered to MY threads only via
@@ -560,6 +540,9 @@ const S={
   library:JSON.parse(localStorage.getItem('n_library')||'[]')||[],
   userId:localStorage.getItem('n_uid')||genId(),
   adminUnlocked:false,
+  // Site-wide layout preference. "auto" follows responsive CSS; the two
+  // explicit modes are an admin preview/override that syncs to visitors.
+  viewMode:'auto',
   // v01.07: admin can temporarily "turn off" a world/section from the
   // profile panel. true = active/visible, false = under review. Synced
   // live via Firebase ('features' doc) so it applies for every visitor,
@@ -608,6 +591,45 @@ function esc(s){const d=document.createElement('div');d.textContent=s||'';return
 function timeAgo(ts){const d=(Date.now()-ts)/1e3;if(d<60)return'just now';if(d<3600)return~~(d/60)+'m ago';if(d<86400)return~~(d/3600)+'h ago';return~~(d/86400)+'d ago';}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 function $(id){return document.getElementById(id);}
+
+// ═══ DISPLAY MODE ═══
+// Kept here because it is shared shell state, but persisted separately from
+// ordinary feature toggles: it needs to be available before the intro closes.
+let viewModeUnsubscribe=null;
+function applyViewMode(mode){
+  const next=['auto','mobile','desktop'].includes(mode)?mode:'auto';
+  S.viewMode=next;
+  document.documentElement.classList.toggle('view-mobile',next==='mobile');
+  document.documentElement.classList.toggle('view-desktop',next==='desktop');
+  ['auto','mobile','desktop'].forEach(key=>{
+    const option=$('vm-opt-'+key), radio=$('vm-radio-'+key);
+    if(option)option.classList.toggle('vm-option-active',key===next);
+    if(radio)radio.classList.toggle('vm-radio-active',key===next);
+  });
+  const label=$('vm-current-label');
+  if(label)label.textContent=next==='auto'?'auto — each screen chooses its natural layout':`${next} layout forced for every visitor`;
+}
+function initViewMode(){
+  if(!db || viewModeUnsubscribe)return;
+  try{
+    viewModeUnsubscribe=db.collection('site-config').doc('display').onSnapshot(doc=>{
+      applyViewMode(doc.exists?(doc.data().viewMode||'auto'):'auto');
+    },()=>applyViewMode('auto'));
+  }catch(e){applyViewMode('auto');}
+}
+async function setViewMode(mode){
+  if(!S.adminUnlocked){toast('admin access required');return;}
+  const next=['auto','mobile','desktop'].includes(mode)?mode:'auto';
+  applyViewMode(next);
+  if(!db){toast('display mode saved locally until Firebase reconnects');return;}
+  try{
+    await db.collection('site-config').doc('display').set({viewMode:next},{merge:true});
+    toast(next==='auto'?'display mode: automatic':'display mode: '+next);
+  }catch(e){
+    toast("couldn't save display mode");
+    console.error('setViewMode:',e);
+  }
+}
 
 // ═══ v01.06: SERVER-SIDE PASSWORD VALIDATION (Netlify Function) ═══
 // Passwords are no longer stored anywhere the browser can read them.

@@ -110,6 +110,12 @@ async function sbxRun(){
     sbxStatus('Running');
     const consoleEl = sbxEl('sbx-console');
     if(consoleEl) consoleEl.textContent = '';
+    const titleEl = sbxEl('sbx-run-title');
+    if(titleEl) titleEl.textContent = (sbxEl('sbx-title-input')&&sbxEl('sbx-title-input').value) || 'Live preview';
+    // v01.37: Run now takes you straight to the full-page canvas — no
+    // more squeezing the actual result into a small panel alongside
+    // everything else. Back to Write is always one tap away.
+    sbxShowSubView('run');
   }catch(e){
     sbxStatus('Adapter error');
     console.error('Sandbox build error:', e);
@@ -221,8 +227,11 @@ function sbxNewCreation(){
   sbxEl('sbx-code').value = '';
   sbxRenderFiles();
   sbxAnalyze();
+  sbxSyncHighlight();
+  sbxAutoResize(sbxEl('sbx-code'), 220, 640);
   const frame = sbxEl('sbx-runner'); if(frame) frame.srcdoc='';
   sbxStatus('Ready');
+  sbxShowSubView('write');
 }
 
 // ═══ App Store — public browsing, guest-accessible ═══
@@ -343,6 +352,8 @@ async function sbxEditOwn(creationId){
   sbxEl('sbx-code').value = creation.code||'';
   sbxRenderFiles();
   sbxAnalyze();
+  sbxSyncHighlight();
+  sbxAutoResize(sbxEl('sbx-code'), 220, 640);
   sbxShowView('workshop');
   sbxRun();
 }
@@ -389,8 +400,26 @@ function initSandboxPage(){
   document.querySelectorAll('[data-sbx-view]').forEach(btn=>{
     btn.addEventListener('click', ()=>sbxShowView(btn.dataset.sbxView));
   });
+  document.querySelectorAll('[data-sbx-subview]').forEach(btn=>{
+    btn.addEventListener('click', ()=>sbxShowSubView(btn.dataset.sbxSubview));
+  });
   const codeEl = sbxEl('sbx-code');
-  if(codeEl) codeEl.addEventListener('input', sbxAnalyze);
+  if(codeEl){
+    codeEl.addEventListener('input', ()=>{
+      sbxAnalyze();
+      sbxSyncHighlight();
+      sbxAutoResize(codeEl, 220, 640);
+    });
+    codeEl.addEventListener('scroll', sbxSyncHighlight);
+    sbxAutoResize(codeEl, 220, 640);
+  }
+  const promptEl = sbxEl('sbx-ai-prompt');
+  if(promptEl){
+    promptEl.addEventListener('input', ()=>sbxAutoResize(promptEl, 44, 300));
+    promptEl.addEventListener('keydown', e=>{
+      if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sbxSubmitAiPrompt(); }
+    });
+  }
   const searchEl = sbxEl('sbx-search');
   if(searchEl) searchEl.addEventListener('input', sbxRenderStore);
   const filesInput = sbxEl('sbx-files-input');
@@ -411,12 +440,58 @@ function initSandboxPage(){
     });
   }
   sbxAnalyze();
+  sbxSyncHighlight();
 }
 
 // ═══ Ask Sandbox's built-in AI to write the code — v01.36 ═══
 // Deliberately code-only: a "hi" prompt gets nothing back, not chat.
 // 5 prompts/day per account (or per IP if signed out), admin exempt —
 // enforced server-side in pixie-chat.js, this is just the UI for it.
+
+// ═══ Sub-view switching within Workshop (Write <-> Run) — v01.37 ═══
+function sbxShowSubView(view){
+  document.querySelectorAll('.sbx-subview').forEach(v=>v.classList.remove('active'));
+  const el = sbxEl('sbx-sub-'+view);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('[data-sbx-subview]').forEach(b=>b.classList.toggle('active', b.dataset.sbxSubview===view));
+}
+
+// ═══ Auto-resizing inputs — the prompt box and code box grow to fit
+// whatever's typed/pasted/generated, rather than staying a fixed size
+// with an internal scrollbar. ═══
+function sbxAutoResize(el, minPx, maxPx){
+  el.style.height = 'auto';
+  const h = Math.max(minPx||0, maxPx?Math.min(el.scrollHeight,maxPx):el.scrollHeight);
+  el.style.height = h+'px';
+}
+
+// ═══ Lightweight syntax highlighter — v01.37 ═══
+// No dependency, single regex pass over comments/strings/tags/keywords/
+// numbers, in priority order so a keyword inside a string never gets
+// re-colored as a keyword, etc. Good enough to look like a real editor
+// for the HTML/JS/CSS mixes Sandbox actually deals with; not a full
+// per-language parser.
+const SBX_TOKEN_RE = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|(<\/?[a-zA-Z][\w-]*|\/?>)|(\b(?:function|const|let|var|if|else|for|while|return|class|new|this|true|false|null|undefined|typeof|async|await|break|continue|switch|case|default|try|catch|finally|throw|import|export|from|of|in|do|extends|super|static|get|set|yield|delete|instanceof|void)\b)|(\b\d+\.?\d*\b)/g;
+function sbxHighlightCode(code){
+  if(!code) return '';
+  let out='', last=0, m;
+  SBX_TOKEN_RE.lastIndex=0;
+  while((m=SBX_TOKEN_RE.exec(code))){
+    out += esc(code.slice(last, m.index));
+    const cls = m[1]?'sbx-tok-comment' : m[2]?'sbx-tok-string' : m[3]?'sbx-tok-tag' : m[4]?'sbx-tok-keyword' : 'sbx-tok-number';
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = m.index + m[0].length;
+  }
+  out += esc(code.slice(last));
+  return out;
+}
+function sbxSyncHighlight(){
+  const codeEl = sbxEl('sbx-code'), hl = sbxEl('sbx-code-highlight');
+  if(!codeEl || !hl) return;
+  hl.querySelector('code').innerHTML = sbxHighlightCode(codeEl.value) + '\n';
+  hl.scrollTop = codeEl.scrollTop;
+  hl.scrollLeft = codeEl.scrollLeft;
+}
 
 function sbxUpdateAiCredits(remaining){
   const el = sbxEl('sbx-ai-credits');
@@ -451,6 +526,7 @@ async function sbxSubmitAiPrompt(){
     }
     await sbxTypewriteCode(data.code);
     input.value = '';
+    sbxAutoResize(input, 44, 300);
     sbxAnalyze();
   }catch(e){
     console.error('sandbox AI request failed:', e);
@@ -463,6 +539,11 @@ async function sbxSubmitAiPrompt(){
 // Types the generated code into the editor a chunk at a time, rather
 // than dumping it in instantly — matches the "watching code appear"
 // feel of an AI actually writing it, not just a paste.
+// v01.37: types the generated code in like it's being written live —
+// small random-ish burst sizes so it doesn't look like a robotic fixed
+// tick, syntax-highlighted and auto-resized every frame so the color
+// and box size both keep pace with the text instead of popping in only
+// once typing finishes.
 function sbxTypewriteCode(fullText){
   return new Promise(resolve=>{
     const codeEl = sbxEl('sbx-code');
@@ -470,13 +551,21 @@ function sbxTypewriteCode(fullText){
     codeEl.value = '';
     codeEl.classList.add('sbx-typing');
     let i = 0;
-    const CHUNK = Math.max(2, Math.round(fullText.length/240)); // finishes in ~2s regardless of length
+    const BASE_CHUNK = Math.max(1, Math.round(fullText.length/300)); // finishes in ~1.5-2s regardless of length
     const step = ()=>{
-      i += CHUNK;
+      i += BASE_CHUNK + Math.floor(Math.random()*BASE_CHUNK); // slight variance = feels less mechanical
       codeEl.value = fullText.slice(0, i);
+      sbxSyncHighlight();
+      sbxAutoResize(codeEl, 220, 640);
       codeEl.scrollTop = codeEl.scrollHeight;
       if(i < fullText.length){ requestAnimationFrame(step); }
-      else{ codeEl.classList.remove('sbx-typing'); resolve(); }
+      else{
+        codeEl.value = fullText;
+        sbxSyncHighlight();
+        sbxAutoResize(codeEl, 220, 640);
+        codeEl.classList.remove('sbx-typing');
+        resolve();
+      }
     };
     requestAnimationFrame(step);
   });

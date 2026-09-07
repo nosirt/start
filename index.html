@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>nosirt</title>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cinzel+Decorative:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -539,57 +539,72 @@
 
     <!-- WORKSHOP: paste/upload/zip/drag-drop -> compatibility report -> run. No account needed. -->
     <section id="sbx-view-workshop" class="sbx-view active">
-      <div class="sbx-layout">
-        <div class="sbx-panel sbx-editor">
-          <div class="sbx-head">
-            <div>
-              <h1>Import a creation</h1>
-              <p>Paste normal AI-generated HTML, JavaScript, or CSS — no special commands needed. Sandbox adapts it automatically.</p>
-            </div>
-            <label class="sbx-upload">
-              <input id="sbx-files-input" type="file" multiple accept=".html,.htm,.js,.mjs,.css,.json,.txt,.png,.jpg,.jpeg,.gif,.svg,.webp,.wav,.mp3,.ogg,.zip">
-              <span>＋ Upload files / ZIP</span>
-            </label>
-          </div>
-          <div id="sbx-drop" class="sbx-drop">Drop a project here — HTML · JS · CSS · assets · ZIP</div>
+      <!-- v01.37: split into two sub-tabs so the writing/generating side
+           and the running canvas each get the whole page to themselves,
+           instead of being squeezed into one crowded 3-column layout.
+           Run auto-switches here; the sub-nav lets you go back freely. -->
+      <div class="sbx-subnav">
+        <button class="sbx-nav-btn active" data-sbx-subview="write">✍️ Write</button>
+        <button class="sbx-nav-btn" data-sbx-subview="run">▶ Run</button>
+      </div>
 
-          <!-- v01.36: ask Sandbox's built-in AI to write the code for you -->
-          <div class="sbx-ai-box">
-            <div class="sbx-ai-head">
-              <span>✨ ask the AI to build it</span>
-              <span id="sbx-ai-credits" class="sbx-ai-credits">5/5 ⚡</span>
+      <div id="sbx-sub-write" class="sbx-subview active">
+        <div class="sbx-write-layout">
+          <div class="sbx-panel sbx-editor">
+            <div class="sbx-head">
+              <div>
+                <h1>Import a creation</h1>
+                <p>Paste normal AI-generated HTML, JavaScript, or CSS — no special commands needed. Sandbox adapts it automatically.</p>
+              </div>
+              <label class="sbx-upload">
+                <input id="sbx-files-input" type="file" multiple accept=".html,.htm,.js,.mjs,.css,.json,.txt,.png,.jpg,.jpeg,.gif,.svg,.webp,.wav,.mp3,.ogg,.zip">
+                <span>＋ Upload files / ZIP</span>
+              </label>
             </div>
-            <div class="sbx-ai-row">
-              <input id="sbx-ai-prompt" class="sbx-text-input" placeholder="e.g. a flappy bird clone with a score counter" style="flex:1">
-              <button class="sbx-primary" id="sbx-ai-submit" onclick="sbxSubmitAiPrompt()">Generate</button>
-            </div>
-          </div>
+            <div id="sbx-drop" class="sbx-drop">Drop a project here — HTML · JS · CSS · assets · ZIP</div>
 
-          <input id="sbx-title-input" class="sbx-text-input" placeholder="Creation name" value="My Creation" style="margin:0 22px 8px;width:calc(100% - 44px)">
-          <input id="sbx-desc-input" class="sbx-text-input" placeholder="What does this do?" style="margin:0 22px 12px;width:calc(100% - 44px)">
-          <div class="sbx-code-wrap"><textarea id="sbx-code" spellcheck="false" placeholder="Paste your code here"></textarea></div>
-          <div id="sbx-file-list" class="sbx-file-list"></div>
-          <div class="sbx-actions">
-            <button class="sbx-primary" id="sbx-run-btn" onclick="sbxRun()">▶ Run</button>
-            <button onclick="sbxSaveDraft()">Save to my space</button>
-            <button onclick="sbxPublish()">Publish to App Store</button>
-            <button onclick="sbxNewCreation()">New</button>
+            <!-- ask Sandbox's built-in AI to write the code for you -->
+            <div class="sbx-ai-box">
+              <div class="sbx-ai-head">
+                <span>✨ ask the AI to build it</span>
+                <span id="sbx-ai-credits" class="sbx-ai-credits">5/5 ⚡</span>
+              </div>
+              <div class="sbx-ai-row">
+                <textarea id="sbx-ai-prompt" class="sbx-text-input sbx-autogrow" rows="1" placeholder="e.g. a flappy bird clone with a score counter"></textarea>
+                <button class="sbx-primary" id="sbx-ai-submit" onclick="sbxSubmitAiPrompt()">Generate</button>
+              </div>
+            </div>
+
+            <input id="sbx-title-input" class="sbx-text-input" placeholder="Creation name" value="My Creation" style="margin:0 22px 8px;width:calc(100% - 44px)">
+            <input id="sbx-desc-input" class="sbx-text-input" placeholder="What does this do?" style="margin:0 22px 12px;width:calc(100% - 44px)">
+            <div class="sbx-code-wrap">
+              <pre id="sbx-code-highlight" aria-hidden="true"><code></code></pre>
+              <textarea id="sbx-code" spellcheck="false" placeholder="Paste your code here"></textarea>
+            </div>
+            <div id="sbx-file-list" class="sbx-file-list"></div>
+            <div class="sbx-actions">
+              <button class="sbx-primary" id="sbx-run-btn" onclick="sbxRun()">▶ Run</button>
+              <button onclick="sbxSaveDraft()">Save to my space</button>
+              <button onclick="sbxPublish()">Publish to App Store</button>
+              <button onclick="sbxNewCreation()">New</button>
+            </div>
           </div>
+          <aside class="sbx-panel sbx-report">
+            <div class="sbx-head sbx-compact">
+              <div><h2>Compatibility</h2><p id="sbx-summary">Nothing imported yet.</p></div>
+              <span id="sbx-pill" class="sbx-pill">WAITING</span>
+            </div>
+            <div id="sbx-report-body"><div class="sbx-empty">Paste code or upload a project. Compatibility checks appear here.</div></div>
+          </aside>
         </div>
-        <aside class="sbx-panel sbx-report">
-          <div class="sbx-head sbx-compact">
-            <div><h2>Compatibility</h2><p id="sbx-summary">Nothing imported yet.</p></div>
-            <span id="sbx-pill" class="sbx-pill">WAITING</span>
-          </div>
-          <div id="sbx-report-body"><div class="sbx-empty">Paste code or upload a project. Compatibility checks appear here.</div></div>
-        </aside>
-        <section class="sbx-panel sbx-runner-panel">
-          <div class="sbx-runner-head">
-            <div><h2>Live preview</h2><p id="sbx-status">Ready</p></div>
-          </div>
-          <iframe id="sbx-runner" title="Sandbox runner" sandbox="allow-scripts"></iframe>
-          <div id="sbx-console" class="sbx-console"></div>
-        </section>
+      </div>
+
+      <div id="sbx-sub-run" class="sbx-subview">
+        <div class="sbx-runner-head">
+          <div><h2 id="sbx-run-title">Live preview</h2><p id="sbx-status">Ready</p></div>
+        </div>
+        <iframe id="sbx-runner" title="Sandbox runner" sandbox="allow-scripts"></iframe>
+        <div id="sbx-console" class="sbx-console"></div>
       </div>
     </section>
 
@@ -812,7 +827,36 @@
 
     <div id="admin-tab-pixie" class="admin-tab-body" style="display:none">
       <div id="pixie-admin-settings">
-        <div class="admin-placeholder">Pixie's settings (shorts source, dialogue tuning, etc.) will show up here as they're built out.</div>
+        <!-- v01.38: personality selector — site-wide, live-synced -->
+        <div class="admin-section-label">personality (site-wide)</div>
+        <div class="pixie-personality-grid">
+          <button class="pixie-personality-btn" id="pp-btn-default" onclick="setPixiePersonality('default')">
+            <strong>default</strong><span>sarcastic, dry, put-upon</span>
+          </button>
+          <button class="pixie-personality-btn" id="pp-btn-mean" onclick="setPixiePersonality('mean')">
+            <strong>mean girl</strong><span>bratty, quick-tempered</span>
+          </button>
+          <button class="pixie-personality-btn" id="pp-btn-helper" onclick="setPixiePersonality('helper')">
+            <strong>helper</strong><span>shy, cute, eager to please</span>
+          </button>
+          <button class="pixie-personality-btn" id="pp-btn-chill" onclick="setPixiePersonality('chill')">
+            <strong>chill</strong><span>banter-heavy, best friend vibe</span>
+          </button>
+        </div>
+
+        <div class="admin-section-label" style="margin-top:18px">custom personality prompt</div>
+        <div style="font-size:.68rem;color:var(--fog);opacity:.6;margin-bottom:8px">
+          when enabled, this fully replaces whichever preset is picked above — she still keeps all her lore/memory/world-knowledge, this only changes her personality flavor.
+        </div>
+        <textarea id="pixie-custom-prompt" class="sq-input" rows="4"
+          placeholder="e.g. sleepy and affectionate, talks slowly, calls everyone 'friend'"
+          style="width:100%;resize:vertical;margin-bottom:8px"></textarea>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="pixie-custom-toggle" class="pixie-custom-toggle" onclick="togglePixieCustomPrompt()">
+            <span class="pixie-custom-dot"></span><span id="pixie-custom-toggle-label">disabled</span>
+          </button>
+          <button class="wcal-mini-btn" onclick="savePixieCustomPrompt()">save custom prompt</button>
+        </div>
       </div>
     </div>
 
@@ -844,7 +888,7 @@
   </div>
 </div>
 
-<div id="float-chat" onclick="openChatPanel()">
+<div id="float-chat" onclick="openChatPanel()" role="button" tabindex="0" aria-label="Open messages" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openChatPanel()}">
   💬<span id="chat-unread-badge" class="chat-unread-badge" style="display:none">0</span>
 </div>
 
@@ -888,7 +932,7 @@
       <button id="chat-tabbtn-global" class="chat-tab-btn active" onclick="switchChatTab('global')">global chat</button>
       <button id="chat-tabbtn-personal" class="chat-tab-btn" onclick="switchChatTab('personal')">personal</button>
       <button id="chat-tabbtn-stone" class="chat-tab-btn" onclick="switchChatTab('stone')">carved in stone</button>
-      <button class="chat-panel-close" onclick="closeChatPanel()">✕</button>
+      <button class="chat-panel-close" onclick="closeChatPanel()" aria-label="Close messages">✕</button>
     </div>
 
     <!-- v01.09: who's online -->
@@ -911,9 +955,9 @@
       <div class="chat-input-bar">
         <button id="chat-media-btn" class="chat-media-btn" style="display:none" onclick="handleChatMediaBtn()"></button>
         <input id="chat-image-input" type="file" accept="image/*" style="display:none" onchange="handleChatImageFileSelected(this)">
-        <button class="chat-send-btn" onclick="openSharePicker({type:'global'})" title="share something">📎</button>
-        <input id="chat-global-input" class="chat-text-input" type="text" placeholder="say something…" maxlength="500" onkeydown="handleChatInputKeydown(event)">
-        <button class="chat-send-btn" onmousedown="event.preventDefault()" onclick="sendChatMessage()">➤</button>
+        <button class="chat-send-btn chat-attach-btn" onclick="openSharePicker({type:'global'})" title="share something" aria-label="Share something">📎</button>
+        <input id="chat-global-input" class="chat-text-input" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" placeholder="Message the world…" maxlength="500" onkeydown="handleChatInputKeydown(event)">
+        <button class="chat-send-btn chat-send-primary" onmousedown="event.preventDefault()" onclick="sendChatMessage()" aria-label="Send message">➤</button>
       </div>
     </div>
 

@@ -129,30 +129,6 @@ function bumpPixieAffection(){
   localStorage.setItem('n_pixie_msg_count',String(n));
 }
 
-// v01.20: SITE AWARENESS — real weather Q&A + playing/linking content
-// directly, instead of only canned tips about these features.
-function getRealWeatherLine(){
-  const e=S.environment;
-  if(!e || !e.ready){
-    return "I don't actually know where you are yet. Allow location (or don't — I'm not the boss of you) and I'll give you the real report instead of vibes.";
-  }
-  const wv=(typeof computeWeatherVisualState==='function')?computeWeatherVisualState():null;
-  const temp=(e.tempC!=null)?Math.round(e.tempC):null;
-  const wind=(e.windSpeed!=null)?Math.round(e.windSpeed):null;
-  let desc='clear';
-  if(wv){
-    if(wv.kind==='rain')desc='raining';
-    else if(wv.kind==='snow')desc='snowing';
-    else if(wv.kind==='thunder')desc='thundering, dramatically';
-    else if(wv.kind==='fog')desc='foggy';
-    else if(wv.kind==='cloudy')desc='cloudy';
-  }
-  let line=`It's ${desc} where you are`+(temp!=null?`, about ${temp}°C`:'');
-  if(wind!=null && wind>=15)line+=`, and windy — ${wind}km/h`;
-  line+='. That\'s the real report, not a guess.';
-  return line;
-}
-
 function pixiePlayMidnightArchive(){
   if(S.featureToggles && S.featureToggles.wireless===false)return null;
   const show=(typeof getMidnightArchiveShow==='function')?getMidnightArchiveShow():((typeof getDefaultShow==='function')?getDefaultShow():null);
@@ -359,8 +335,6 @@ function addPixieMessage(who,text,action){
   }
 }
 
-function handlePixieInputKeydown(e){ if(e.key==='Enter')sendPixieMessage(); }
-
 // Idle timers — still fire nudges via addPixieMessage (which now goes
 // to the DM thread), but only if the thread is currently open.
 let pixieIdleShortTimer=null;
@@ -380,14 +354,6 @@ function resetPixieIdleTimers(){
 function clearPixieIdleTimers(){
   clearTimeout(pixieIdleShortTimer);
   clearTimeout(pixieIdleLongTimer);
-}
-
-// Poke (kept for compatibility — now just adds a message to DM thread)
-function pokePixie(){
-  loadPixieLines().then(data=>{
-    const pool=data.flavor&&data.flavor.clickRepeat;
-    if(pool&&pool.length)addPixieMessage('pixie',pickRandom(pool));
-  });
 }
 
 // v01.17: NAME CAPTURE
@@ -421,21 +387,6 @@ function detectUnpromptedName(text){
   const m=/\b(i'?m|i am|my name is|call me|name'?s)\s+([a-zA-Z][a-zA-Z0-9 _-]{0,23})\b/i.exec(text);
   return m?m[2]:null;
 }
-// v01.21 FIX: previously, once she asked for a name, the ENTIRE next
-// message got treated as the answer no matter what it was — so asking
-// her "what's your name?" back got swallowed as an attempted name
-// claim. Now a reply only counts as a name if it either uses an
-// explicit marker phrase, OR is short and plain (no question mark, no
-// sentence structure) — a bare "Dash" or "Sarah" passes; "what's your
-// name" (a question) does not.
-function looksLikeNameReply(text){
-  const t=(text||'').trim();
-  if(!t || t.includes('?'))return false;
-  if(/^(i'?m|i am|my name is|call me|name'?s)\s+/i.test(t))return true;
-  const words=t.split(/\s+/);
-  return words.length<=2 && /^[a-zA-Z' -]+$/.test(t) && t.length<=24;
-}
-
 // ═══ v01.21: CHAT HISTORY (persisted in this browser) ═══
 const PIXIE_HISTORY_KEY='n_pixie_chat_history';
 const PIXIE_HISTORY_MAX=200;
@@ -461,6 +412,46 @@ function savePixieHistoryEntry(who,text){
 }
 
 // ── Admin login/logout hooks — called by admin.js ──
+// v01.38: Pixie personality admin controls — site-wide, live-synced via
+// fbListen/fbSave('pixiePersonality') in map-layout.js/core.js, same
+// pattern as the existing feature-toggle system.
+function setPixiePersonality(key){
+  if(!S.adminUnlocked){toast('admin access required');return;}
+  const cur = S.pixiePersonality || {active:'default',customPrompt:'',customEnabled:false};
+  const updated = Object.assign({},cur,{active:key});
+  fbSave('pixiePersonality',{v:JSON.stringify(updated)});
+  toast(`Pixie's personality set to "${key}" site-wide`);
+}
+function togglePixieCustomPrompt(){
+  if(!S.adminUnlocked){toast('admin access required');return;}
+  const cur = S.pixiePersonality || {active:'default',customPrompt:'',customEnabled:false};
+  const promptText = ($('pixie-custom-prompt')&&$('pixie-custom-prompt').value.trim()) || cur.customPrompt || '';
+  if(!cur.customEnabled && !promptText){ toast('write a custom prompt first'); return; }
+  const updated = Object.assign({},cur,{customEnabled:!cur.customEnabled, customPrompt:promptText});
+  fbSave('pixiePersonality',{v:JSON.stringify(updated)});
+  toast(updated.customEnabled ? 'custom prompt enabled — site-wide' : 'custom prompt disabled');
+}
+function savePixieCustomPrompt(){
+  if(!S.adminUnlocked){toast('admin access required');return;}
+  const cur = S.pixiePersonality || {active:'default',customPrompt:'',customEnabled:false};
+  const promptText = ($('pixie-custom-prompt')&&$('pixie-custom-prompt').value.trim()) || '';
+  const updated = Object.assign({},cur,{customPrompt:promptText});
+  fbSave('pixiePersonality',{v:JSON.stringify(updated)});
+  toast('custom prompt saved');
+}
+function renderPixiePersonalityAdmin(){
+  const pp = S.pixiePersonality || {active:'default',customPrompt:'',customEnabled:false};
+  ['default','mean','helper','chill'].forEach(k=>{
+    const btn=$('pp-btn-'+k);
+    if(btn)btn.classList.toggle('active', pp.active===k && !pp.customEnabled);
+  });
+  const promptEl=$('pixie-custom-prompt');
+  if(promptEl && document.activeElement!==promptEl) promptEl.value = pp.customPrompt||'';
+  const toggleBtn=$('pixie-custom-toggle'), toggleLabel=$('pixie-custom-toggle-label');
+  if(toggleBtn) toggleBtn.classList.toggle('on', !!pp.customEnabled);
+  if(toggleLabel) toggleLabel.textContent = pp.customEnabled ? 'enabled — overriding all presets' : 'disabled';
+}
+
 window.pixieOnAdminLogin = function(){
   // Switch to dev history store, reset AI context, re-render thread
   pixieDevMode = false; // start in character mode even when admin
@@ -475,67 +466,6 @@ window.pixieOnAdminLogout = function(){
   pixieAdminDirective = null;
   if(typeof rerenderPixieDmThread === 'function') rerenderPixieDmThread();
 };
-// Renders a past message without re-saving it (used only to replay
-// history on open — saving here would just grow the log every visit).
-function renderPixieHistoryLine(who,text){
-  const log=$('pixie-messages');
-  if(!log)return;
-  const div=document.createElement('div');
-  div.className='pixie-msg '+(who==='user'?'user':'pixie');
-  const textEl=document.createElement('div');
-  textEl.textContent=text;
-  div.appendChild(textEl);
-  log.appendChild(div);
-}
-
-// ═══ v01.21: CONVERSATION TREE ENGINE ═══
-// Generic walker for the multi-turn trees in pixie-lines.json (trees).
-// A tree has: trigger (regex string), open (lines shown immediately),
-// branches (array of {match, reply, branches?}) matched against the
-// NEXT user message, and an optional fallback if nothing matches.
-// State lives in S.pixieAwaiting as {type:'tree', branches, fallback}
-// while a tree is mid-conversation; cleared once a leaf is reached.
-function findPixieTree(text){
-  const data=PIXIE_LINES;
-  if(!data || !data.trees)return null;
-  const t=text.toLowerCase();
-  for(const id in data.trees){
-    const tree=data.trees[id];
-    if(tree.trigger && new RegExp(tree.trigger,'i').test(t))return tree;
-  }
-  return null;
-}
-function pickFriendshipWhatAreWeLine(){
-  const tier=getPixieAffectionTier();
-  if(tier==='low')return "...Potentially.";
-  if(tier==='medium')return "...I think we're getting there.";
-  return "...Yeah. I think so. Don't make me say it twice.";
-}
-function resolvePixieTreeTokens(lines){
-  return (lines||[]).map(l=> l==='__FRIENDSHIP_TIER__' ? pickFriendshipWhatAreWeLine() : l);
-}
-// Returns an array of lines to show, or null if nothing in the current
-// tree state matched (caller falls through to the generic engine).
-function advancePixieTree(text){
-  const awaiting=S.pixieAwaiting;
-  if(!awaiting || awaiting.type!=='tree')return null;
-  const t=text.toLowerCase();
-  const branches=awaiting.branches||[];
-  for(const b of branches){
-    if(b.match && new RegExp(b.match,'i').test(t)){
-      const lines=resolvePixieTreeTokens(b.reply);
-      if(b.branches && b.branches.length){
-        S.pixieAwaiting={type:'tree', branches:b.branches, fallback:b.fallback||awaiting.fallback};
-      }else{
-        S.pixieAwaiting=null;
-      }
-      return lines;
-    }
-  }
-  S.pixieAwaiting=null;
-  return awaiting.fallback?resolvePixieTreeTokens(awaiting.fallback):null;
-}
-
 // ═══ v01.20/21: fragment combiner (Pack #4) — assembles a reply from
 // 1-2 independent fragment pools instead of one fixed line, so the
 // same "categories" produce a much larger number of effectively-
@@ -556,132 +486,6 @@ function buildUniversalReaction(data){
     }
   }
   return line;
-}
-
-async function sendPixieMessage(){
-  const input=$('pixie-input');
-  if(!input)return;
-  const text=input.value.trim();
-  if(!text)return;
-  addPixieMessage('user',text);
-  input.value='';
-  bumpPixieAffection();
-  resetPixieIdleTimers();
-
-  // ── Dev mode toggle — admin only ──
-  if(S.adminUnlocked){
-    const cmd = text.toLowerCase().trim();
-    if(cmd === '(open)'){
-      pixieDevMode = true;
-      pixieAiHistory = [];
-      // Load dev mode history (sessionStorage)
-      if(typeof rerenderPixieDmThread === 'function') rerenderPixieDmThread();
-      addPixieMessage('pixie', '[ dev mode on — ask me anything ]');
-      return;
-    }
-    if(cmd === '(close)'){
-      pixieDevMode = false;
-      pixieAiHistory = [];
-      // Return to regular history (localStorage)
-      if(typeof rerenderPixieDmThread === 'function') rerenderPixieDmThread();
-      addPixieMessage('pixie', '[ back in character. sigh. ]');
-      return;
-    }
-    // v01.32: any other (...) message sets/replaces the standing admin
-    // directive rather than being sent as a normal chat turn — the very
-    // next real message will already carry it. Whatever's inside the
-    // parens is used verbatim, unedited, as free-form instruction text.
-    const directiveMatch = /^\(([\s\S]+)\)$/.exec(text.trim());
-    if(directiveMatch){
-      pixieAdminDirective = directiveMatch[1].trim();
-      addPixieMessage('pixie', pixieAdminDirective
-        ? `[ directive set: "${pixieAdminDirective}" ]`
-        : '[ directive cleared ]');
-      return;
-    }
-  }
-
-  // ── Name capture — always goes through AI for smart validation ──
-  const wasAwaitingName = S.pixieAwaiting === 'name';
-  const unprompted = detectUnpromptedName(text);
-
-  if(wasAwaitingName || unprompted){
-    if(unprompted && !wasAwaitingName){
-      // Volunteer name without being asked — quick claim, no AI needed
-      S.pixieAwaiting = null;
-      const data = await loadPixieLines();
-      setTimeout(async () => {
-        const res = await claimDisplayName(unprompted);
-        if(res.locked){
-          addPixieMessage('pixie', pickLineFromCategory(data.special&&data.special.nameLocked)||"You already used your one change.");
-          return;
-        }
-        if(!res.ok){ addPixieMessage('pixie', "That's not really a name I can work with. Try again?"); return; }
-        const cat = res.wasFirst ? 'nameGivenFresh' : 'nameGivenNumbered';
-        const line = pickLineFromCategory(data.special&&data.special[cat]);
-        addPixieMessage('pixie', fillNameTokens(line||(res.wasFirst?`Fine. ${res.name} it is.`:`Someone beat you to that one. You're ${res.name} ${res.number} now.`)));
-      }, 350 + Math.random() * 400);
-      return;
-    }
-
-    // wasAwaitingName — route through AI with isNamingCheck:true for smart validation
-    // The server extracts a real name if present, or responds naturally if not.
-    S.pixieAwaiting = null;
-    try {
-      const res = await fetch('/.netlify/functions/pixie-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: pixieAiHistory.slice(0, -1),
-          isAdmin: !!(typeof S !== 'undefined' && S.adminUnlocked),
-          isDevMode: pixieDevMode,
-          adminDirective: pixieAdminDirective || null,
-          isNamingCheck: true,
-          siteContext: buildPixieSiteContext()
-        })
-      });
-      const data = await res.json();
-      if(data.extractedName){
-        // AI confirmed it's a real name
-        const lines = await loadPixieLines();
-        const claimRes = await claimDisplayName(data.extractedName);
-        if(claimRes.locked){
-          addPixieMessage('pixie', pickLineFromCategory(lines.special&&lines.special.nameLocked)||"You already used your one change.");
-        } else if(!claimRes.ok){
-          addPixieMessage('pixie', "That's not really a name I can work with. Try again?");
-          S.pixieAwaiting = 'name'; // ask again
-        } else {
-          // Show Pixie's natural acknowledgment reply from AI (already in-character)
-          if(data.reply) addPixieMessage('pixie', data.reply);
-          else {
-            const cat = claimRes.wasFirst ? 'nameGivenFresh' : 'nameGivenNumbered';
-            const line = pickLineFromCategory(lines.special&&lines.special[cat]);
-            addPixieMessage('pixie', fillNameTokens(line||(claimRes.wasFirst?`Fine. ${claimRes.name} it is.`:`You're ${claimRes.name} ${claimRes.number} now.`)));
-          }
-        }
-      } else if(data.reply){
-        // Not a name — AI replied naturally, keep waiting for a real name
-        pixieAiHistory.push({ role: 'user', text });
-        pixieAiHistory.push({ role: 'model', text: data.reply });
-        S.pixieAwaiting = 'name';
-        addPixieMessage('pixie', data.reply);
-      } else {
-        // AI failed — local fallback, try name ask again later
-        S.pixieAwaiting = 'name';
-        const fallback = await loadPixieLines();
-        addPixieMessage('pixie', getPixieResponse(text));
-      }
-    } catch(err) {
-      console.warn('Naming AI check failed:', err.message);
-      S.pixieAwaiting = 'name';
-      addPixieMessage('pixie', getPixieResponse(text));
-    }
-    return;
-  }
-
-  // ── Everything else → AI first, local engine as fallback ──
-  sendPixieAiMessage(text);
 }
 
 // ═══ LIVE SITE CONTEXT — assembled fresh on every message ═══
@@ -1323,6 +1127,7 @@ async function sendPixieAiMessage(userText) {
         isAdmin: !!(typeof S !== 'undefined' && S.adminUnlocked),
         isDevMode: pixieDevMode,
         adminDirective: pixieAdminDirective || null,
+        pixiePersonality: (typeof S !== 'undefined' && S.pixiePersonality) || null,
         siteContext: buildPixieSiteContext()
       })
     });
@@ -1406,15 +1211,6 @@ let pixieDragging=false;
 let pixieMoved=false;
 let pixieWanderTimer=null;
 let pixieAway=false;
-
-// v01.21: PERSISTENT QUICK-ACCESS TAB — her wandering icon can be off
-// exploring/hiding at the edge of the screen (or mid-flight, invisible)
-// right when someone wants to talk to her. This small always-visible
-// tab sits just above the bottom nav and opens her panel directly, same
-// as tapping her wandering icon, so people don't have to wait for her.
-// v01.25: quick tab removed — Pixie is in the DM list now.
-// initPixieQuickTab kept as no-op for compat.
-function initPixieQuickTab(){ /* removed v01.25 */ }
 
 function initPixie(){
   const icon=$('pixie-icon');

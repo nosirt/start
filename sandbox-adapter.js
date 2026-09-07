@@ -159,13 +159,27 @@ SandboxHost.notify('ready', {});
 <\/script>`;
 
     const wrappedJs = `try {\n${joinedJs}\n} catch (e) {\n  if (window.SandboxHost) SandboxHost.notify('error', { message: String(e && e.stack || e) });\n  console.error(e);\n}`;
+    const scriptTag = '<script>' + wrappedJs.replace(/<\/script/gi, '<\\/script>') + '<\\/script>';
 
+    // v01.36 BUG FIX: this used to require a literal </head> and </body>
+    // in the pasted/generated HTML to inject the CSS and JS into — if
+    // either was missing (extremely common in quick AI-generated
+    // snippets: no <head> at all, or an unclosed/omitted </body>), the
+    // .replace() calls silently matched nothing, and the CSS — or the
+    // user's entire script — never made it into the document at all.
+    // The code would "select"/load but nothing would ever actually run,
+    // with no error anywhere to explain why. Now falls back to just
+    // appending wherever the expected tag is missing — browsers parse a
+    // stray trailing <script>/<style> tag just fine regardless of
+    // formal head/body structure, so this can no longer silently drop
+    // anything.
     if (/<html\b/i.test(shell)) {
-      return shell
-        .replace(/<\/head>/i, head + '</head>')
-        .replace(/<\/body>/i, runtime + '<script>' + wrappedJs.replace(/<\/script/gi, '<\\/script>') + '<\\/script></body>');
+      let out = shell;
+      out = /<\/head>/i.test(out) ? out.replace(/<\/head>/i, head + '</head>') : (head + out);
+      out = /<\/body>/i.test(out) ? out.replace(/<\/body>/i, runtime + scriptTag + '</body>') : (out + runtime + scriptTag);
+      return out;
     }
-    return `<!doctype html><html><head>${head}</head><body>${shell}${runtime}<script>${wrappedJs.replace(/<\/script/gi, '<\\/script>')}<\/script></body></html>`;
+    return `<!doctype html><html><head>${head}</head><body>${shell}${runtime}${scriptTag}</body></html>`;
   }
 
   return { classify, inspect, build };

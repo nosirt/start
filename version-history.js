@@ -7,6 +7,36 @@
 
 const VERSION_HISTORY = [
   {
+    version: '01.38',
+    date: '2026-09-07',
+    changes: [
+      'Refined chat into an adaptive mobile sheet / desktop conversation window with smoother entrance and message motion',
+      'Improved message composition controls, keyboard behavior, accessibility labels, and reduced-motion support',
+      'Added the supplied full-resolution Nosirt map artwork to the project assets',
+      'Maintenance pass: restored the admin display-mode controls and corrected user-show episode writes/deletes to the live nosirt_show_episodes collection'
+    ]
+  },
+  {
+    version: '01.37',
+    date: '9/2026',
+    changes: [
+      'FIX (confirmed root cause, tested): the code runner could silently do nothing at all — the adapter required a literal </head> and </body> in the pasted/generated HTML to inject styles and the user\'s own script into. Extremely common AI-generated snippets skip a proper <head> or leave <body> unclosed; when that happened, the CSS — or the user\'s entire script — never made it into the assembled document, with no error anywhere to explain why. Verified with a direct test: the old logic dropped the runtime AND the user\'s script entirely for a snippet missing those tags; the fix (fall back to appending wherever the tag is missing, which browsers parse fine regardless of formal structure) now includes everything every time',
+      'FIX (confirmed): the AI generation feature was returning the literal text "[object Object]" instead of code — callAI() returns a wrapped { data, provider, model } object, and this was being passed straight to String() instead of pulling the actual text out of it first',
+      'FIX (very likely primary cause of "fails to call any AI"): code generation was using the same 2-3 second timeouts built for Pixie\'s short chat replies. Real code generation with no token limit legitimately takes much longer — those timeouts would abort almost every attempt before the model finished, cascading through every fallback provider and failing outright. Given a dedicated 28-second timeout instead (Netlify\'s own function limit is 60s, so this has real room)',
+      'Restructured the Workshop into two sub-tabs — Write and Run — instead of squeezing the editor, compatibility report, and live preview into one crowded three-column layout. Hitting Run takes you straight to a full-page canvas for whatever you\'re running; Write is always one tap back',
+      'Real syntax highlighting — comments, strings, HTML tags, keywords, and numbers are color-coded live as you type or paste, and while the AI types code in, via a lightweight built-in highlighter (transparent textarea layered over a highlighted overlay, kept in sync on every keystroke) — no external library',
+      'The AI-generated code now types in letter by letter with a human-but-fast typing animation, colored and auto-sized in real time as it goes, rather than fading in all at once',
+      'The prompt box and code box both grow dynamically to fit whatever\'s typed, pasted, or generated instead of staying a fixed size with an internal scrollbar',
+      'General visual pass on Sandbox — refined shadows, gradients, and spacing throughout to read as a real modern editor rather than a flat early-2000s layout',
+      'Repositioned the Sandbox map pin to the large central ruins structure per a reference screenshot, rather than its previous spot crowded next to the wireless pin',
+      'Pixie personality overhaul: rewrote her voice guidance to drop the old hard sentence-count ceiling that made every reply feel clipped and robotic regardless of context — she now replies at whatever length actually fits the moment, and is explicitly given room to invent small consistent new lore/details rather than only working from a fixed script',
+      'NEW: three selectable personality flavors (mean girl, helper, chill), site-wide, admin-controlled from a new Pixie tab in the admin panel — all three are still explicitly the same person underneath (same lore, memory, world-knowledge), and she\'s aware she has moods; if asked why her vibe changed, "oh, sometimes I just get like that" is the acknowledgment',
+      'NEW: admin-only custom personality prompt with an enable toggle (green when active) that fully overrides whichever preset is selected, site-wide, the moment it\'s turned on — same live-sync pattern the existing feature-toggle system already uses, so it takes effect for every visitor immediately, not just the admin\'s own session',
+      'Bumped Pixie\'s reply length cap from 250 to 600 tokens — the old cap was itself part of why replies felt clipped no matter what the personality prompt asked for',
+      'Version bumped to 01.37'
+    ]
+  },
+  {
     version: '01.36',
     date: '9/2026',
     changes: [

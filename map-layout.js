@@ -91,6 +91,13 @@ function enterSite(skipAnim){
       applyFeatureToggles();
       if(S.adminUnlocked&&typeof renderFeatureToggleList==='function')renderFeatureToggleList();
     });
+    // v01.38: Pixie's active personality flavor — same live-sync
+    // pattern as features above, so an admin's change takes effect for
+    // every visitor immediately, not just their own session.
+    fbListen('pixiePersonality', d=>{
+      S.pixiePersonality=Object.assign({active:'default',customPrompt:'',customEnabled:false},JSON.parse(d.v||'{}'));
+      if(S.adminUnlocked&&typeof renderPixiePersonalityAdmin==='function')renderPixiePersonalityAdmin();
+    });
     // View-mode (auto/mobile/desktop) — live-synced so admin changes
     // propagate to all open visitors in real-time.
     if(typeof initViewMode==='function')initViewMode();
@@ -148,7 +155,7 @@ const PIN_LOCS={
   forum:[3230,2070],
   castle:[4260,1510],
   wireless:[4150,2940],
-  sandbox:[4500,3220]
+  sandbox:[2450,2400]
 };
 const MAP_MAX_SCALE=1.35;
 

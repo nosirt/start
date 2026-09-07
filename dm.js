@@ -102,8 +102,8 @@ function renderPixieDmThreadView(container){
     </div>
     <div id="pixie-dm-messages" class="chat-messages" style="flex:1"></div>
     <div class="chat-input-bar">
-      <input id="pixie-dm-input" class="chat-text-input" type="text" placeholder="say something…" maxlength="300" onkeydown="handlePixieDmInputKeydown(event)">
-      <button class="chat-send-btn" onmousedown="event.preventDefault()" onclick="sendPixieDmMessage()">➤</button>
+      <input id="pixie-dm-input" class="chat-text-input" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" placeholder="Message Pixie…" maxlength="300" onkeydown="handlePixieDmInputKeydown(event)">
+      <button class="chat-send-btn chat-send-primary" onmousedown="event.preventDefault()" onclick="sendPixieDmMessage()" aria-label="Send message">➤</button>
     </div>
   `;
   const msgEl = $('pixie-dm-messages');
@@ -113,7 +113,7 @@ function renderPixieDmThreadView(container){
   } else {
     history.forEach(h=>{
       const div = document.createElement('div');
-      div.className = 'chat-msg' + (h.who==='user' ? ' mine' : '');
+      div.className = 'chat-msg chat-message-appear' + (h.who==='user' ? ' mine' : '');
       const span = document.createElement('span');
       span.className = 'chat-text';
       span.textContent = h.text;
@@ -435,9 +435,9 @@ function renderDmThreadView(container){
     </div>
     <div id="dm-thread-messages" class="chat-messages" style="flex:1"></div>
     <div class="chat-input-bar">
-      <button class="chat-send-btn" onclick="openSharePicker({type:'dm', to:'${esc(other)}'})" title="share something">📎</button>
-      <input id="dm-thread-input" class="chat-text-input" type="text" placeholder="message ${esc(other)}…" maxlength="1000" onkeydown="handleDmInputKeydown(event)">
-      <button class="chat-send-btn" onmousedown="event.preventDefault()" onclick="sendDmMessage()">➤</button>
+      <button class="chat-send-btn chat-attach-btn" onclick="openSharePicker({type:'dm', to:'${esc(other)}'})" title="share something" aria-label="Share something">📎</button>
+      <input id="dm-thread-input" class="chat-text-input" type="text" inputmode="text" enterkeyhint="send" autocomplete="off" placeholder="Message ${esc(other)}…" maxlength="1000" onkeydown="handleDmInputKeydown(event)">
+      <button class="chat-send-btn chat-send-primary" onmousedown="event.preventDefault()" onclick="sendDmMessage()" aria-label="Send message">➤</button>
     </div>
   `;
 
@@ -450,7 +450,7 @@ function renderDmThreadView(container){
       let media = '';
       if(m.sharedCard && typeof renderSharedCardHtml==='function') media = renderSharedCardHtml(m.sharedCard, isMine);
       const textPart = m.text ? `<span class="chat-text">${esc(m.text)}</span>` : '';
-      return `<div class="chat-msg${isMine?' mine':''}">
+      return `<div class="chat-msg chat-message-appear${isMine?' mine':''}">
         ${textPart}
         ${media}
       </div>`;

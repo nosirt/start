@@ -243,6 +243,9 @@ function openChatPanel(){
   $('chat-panel').classList.add('open');
   switchChatTab('global');
   renderMyPresenceDot(); // ensure dot colour is correct on open
+  // Let the sheet settle before bringing up the keyboard, which feels more
+  // deliberate on mobile and avoids a visible layout jump.
+  setTimeout(()=>{ const input=$('chat-global-input'); if(input && window.matchMedia('(max-width: 759px)').matches) input.focus({preventScroll:true}); }, 260);
 }
 function closeChatPanel(){
   $('chat-panel').classList.remove('open');
@@ -359,7 +362,7 @@ function renderChatMessages(){
     const nameHtml = nameIsClickable
       ? `<span class="chat-user chat-user-clickable" onclick="openDmPopup('${esc(m.accountUsername)}','${esc(label)}')">${avatar}${esc(label)}</span>`
       : `<span class="chat-user">${avatar}${esc(label)}</span>`;
-    return `<div class="chat-msg${mine?' mine':''}">
+    return `<div class="chat-msg chat-message-appear${mine?' mine':''}">
       <div class="chat-msg-head">
         ${nameHtml}${delBtn}
       </div>

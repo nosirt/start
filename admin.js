@@ -79,7 +79,7 @@ function renderAdminShowsTab(){
 }
 
 function switchAdminTab(tab){
-  ['features','chat','environment','pixie','users','moderation','shows'].forEach(t=>{
+  ['features','display','chat','environment','pixie','users','moderation','shows'].forEach(t=>{
     const body=$('admin-tab-'+t),btn=$('admin-tabbtn-'+t);
     if(body)body.style.display=(t===tab)?'flex':'none';
     if(btn)btn.classList.toggle('active',t===tab);
@@ -87,6 +87,7 @@ function switchAdminTab(tab){
   // Load data on demand when a tab is opened
   if(tab==='users') adminLoadUserList();
   if(tab==='shows' && typeof renderAdminShowsTab==='function') renderAdminShowsTab();
+  if(tab==='pixie' && typeof renderPixiePersonalityAdmin==='function') renderPixiePersonalityAdmin();
 }
 
 function toggleAdminSection(){

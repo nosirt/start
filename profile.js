@@ -204,13 +204,8 @@ function hideMapUI() {
   if (tools) tools.style.display = 'none';
 }
 
-function showMapUI() {
-  // Intentionally disabled — map UI removed in v01.05
-}
-
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     hideMapUI();
   }, 100);
 });
-

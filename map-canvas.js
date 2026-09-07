@@ -200,13 +200,13 @@ function drawMapCanvas(){
   mGarden(ctx,980,1220,t);
   mRuins(ctx,740,980,t);
   mWireless(ctx,840,1620,t);
-  mSandbox(ctx,1180,1900,t);
+  mSandbox(ctx,700,910,t);
   mMapLabel(ctx,980,1320,'the garden');
   mMapLabel(ctx,1560,1934,'town square');
   mMapLabel(ctx,2280,1160,'the tower');
   mMapLabel(ctx,1960,742,(typeof getKeepTitle==='function'?getKeepTitle():"nosirt's keep"));
   mMapLabel(ctx,840,1712,'the wireless');
-  mMapLabel(ctx,1180,1996,'sandbox');
+  mMapLabel(ctx,700,1002,'sandbox');
 
   // ISLANDS
   mIsland(ctx,290,490,85,52);mIsland(ctx,2850,330,68,42);
